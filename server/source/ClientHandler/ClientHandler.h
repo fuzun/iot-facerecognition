@@ -17,35 +17,31 @@
 *    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#ifndef CLIENTHANDLER_H
+#define CLIENTHANDLER_H
 
-#include <QMainWindow>
+#include <QObject>
+#include <QHash>
 
-QT_BEGIN_NAMESPACE
-namespace Ui { class MainWindow; }
-QT_END_NAMESPACE
-
-class MainWindow : public QMainWindow
+class ClientHandler : public QObject
 {
     Q_OBJECT
 
-public:
-    MainWindow(QWidget *parent = nullptr, class Server* _server = nullptr);
-    ~MainWindow();
-
-    friend class UIInterface;
-
-signals:
-    void end();
-
-private slots:
-    void on_quitButton_clicked();
-
-    void on_aboutButton_clicked();
-
 private:
-    Ui::MainWindow *ui;
-    class Server* server;
+    class QSettings* config;
+    class UIInterface* uiInterface;
+
+    class QHash<class QWebSocket*, class Client *> clients;
+
+public:
+    explicit ClientHandler(QObject *parent, UIInterface* _uiInterface, QSettings* config);
+    ~ClientHandler();
+
+    void newClient(class QWebSocket *socket);
+    void removeClient(class QWebSocket *socket);
+
+
+
 };
-#endif // MAINWINDOW_H
+
+#endif // CLIENTHANDLER_H

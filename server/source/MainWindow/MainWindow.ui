@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>903</width>
-    <height>621</height>
+    <width>900</width>
+    <height>600</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -17,34 +17,40 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>iot-facerecognition-server</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <widget class="QListView" name="listView"/>
+     <widget class="QListWidget" name="clientList"/>
     </item>
     <item>
-     <widget class="QPlainTextEdit" name="plainTextEdit">
+     <widget class="QTextEdit" name="serverLog">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
       </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-      <property name="sizeAdjustPolicy">
-       <enum>QAbstractScrollArea::AdjustIgnored</enum>
-      </property>
       <property name="readOnly">
        <bool>true</bool>
       </property>
-      <property name="plainText">
+      <property name="markdown">
        <string/>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="aboutButton">
+      <property name="text">
+       <string>About...</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="quitButton">
+      <property name="text">
+       <string>Quit</string>
       </property>
      </widget>
     </item>
