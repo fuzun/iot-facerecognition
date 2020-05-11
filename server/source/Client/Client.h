@@ -37,8 +37,6 @@ private:
     class DLIBWorker *dlibWorker;
     bool dlibWorkerFree;
 
-    bool dialogUpdateEnabled;
-
     class QTimer* clearSecondaryDisplayTimer;
 
     class QListWidgetItem* listItem;
@@ -54,7 +52,6 @@ public:
     void setPrimaryDisplayItem(QGraphicsPixmapItem* item);
     void setSecondaryDisplayItem(QGraphicsPixmapItem* item);
 
-    void setDialogUpdate(bool update);
     QString getName() const;
 
     QListWidgetItem* getListWidgetItem();

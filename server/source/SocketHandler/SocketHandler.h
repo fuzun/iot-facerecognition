@@ -51,6 +51,7 @@ private slots:
     void onDisconnect();
     void onSslErrors(const QList<QSslError>& errors);
 
+
 signals:
 
 };

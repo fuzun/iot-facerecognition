@@ -29,12 +29,15 @@ ClientDialog::ClientDialog(QWidget *parent) :
 
 ClientDialog::~ClientDialog()
 {
-    emit destroy();
     delete ui;
 }
 
-
 void ClientDialog::on_okButton_clicked()
 {
-    emit destroy();
+    emit sDestroy();
+}
+
+void ClientDialog::reject()
+{
+    emit sDestroy();
 }

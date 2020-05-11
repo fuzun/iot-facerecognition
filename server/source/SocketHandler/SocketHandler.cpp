@@ -56,6 +56,7 @@ SocketHandler::SocketHandler(QObject *parent, UIInterface *_uiInterface, ClientH
     {
         connect(webSocketServer, &QWebSocketServer::newConnection, this, &SocketHandler::onNewConnection);
         connect(webSocketServer, &QWebSocketServer::sslErrors, this, &SocketHandler::onSslErrors);
+       // connect(webSocketServer, &QWebSocketServer::acceptError, this, )
     }
     else
     {

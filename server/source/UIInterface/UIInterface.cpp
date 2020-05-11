@@ -119,8 +119,6 @@ void UIInterface::setClientName(const QString& name)
 {
     Client* client = qobject_cast<Client *>(sender());
     client->getListWidgetItem()->setText(name);
-
-
 }
 
 void UIInterface::newClient(Client *client)
@@ -177,13 +175,12 @@ void UIInterface::on_clientList_itemDoubleClicked(QListWidgetItem *item)
         scene->addItem(secondary);
 
         clientDialogMap->insert(clientDialog, client);
-        connect(clientDialog, &ClientDialog::destroy, this, &UIInterface::on_ClientDialog_destroy);
+        connect(clientDialog, &ClientDialog::sDestroy, this, &UIInterface::on_ClientDialog_destroy);
         clientDialog->show();
 
         client->setPrimaryDisplayItem(primary);
         client->setSecondaryDisplayItem(secondary);
 
-        client->setDialogUpdate(true);
     }
 }
 
@@ -192,6 +189,7 @@ void UIInterface::on_ClientDialog_destroy()
     ClientDialog* dialog = qobject_cast<ClientDialog *>(sender());
     Client* client = clientDialogMap->find(dialog).value();
     clientDialogMap->remove(dialog);
-    delete dialog;
+    if(dialog)
+        dialog->destroy();
     client->setDialog(nullptr);
 }

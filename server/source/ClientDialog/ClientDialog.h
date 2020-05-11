@@ -41,10 +41,11 @@ private:
 
 private:
 signals:
-    void destroy();
+    void sDestroy();
 
 private slots:
     void on_okButton_clicked();
+    void reject() override;
 };
 
 #endif // CLIENTDIALOG_H

@@ -50,7 +50,6 @@ Client::Client(QObject *parent, QWebSocket* _socket, QSettings* config)
     QObject::connect(socket, &QWebSocket::binaryMessageReceived, this, &Client::processBinaryMessage);
 
     dlibWorkerFree = true;
-    dialogUpdateEnabled = false;
 
     clearSecondaryDisplayTimer = new QTimer(this);
     clearSecondaryDisplayTimer->setInterval(1000);
@@ -114,11 +113,6 @@ QString Client::getName() const
     return name;
 }
 
-void Client::setDialogUpdate(bool update)
-{
-    dialogUpdateEnabled = update;
-}
-
 void Client::setPrimaryDisplayItem(QGraphicsPixmapItem* item)
 {
     primaryDisplay = item;
@@ -144,7 +138,7 @@ void Client::processBinaryMessage(const QByteArray& data)
         // log("Omitting the image frame since DLIB is busy");
     }
 
-    if(dialogUpdateEnabled)
+    if(dialog)
     {
         cv::Mat mat = DLIBWorker::constructMatFromBuffer(data);
         cv::cvtColor(mat, mat, cv::COLOR_BGR2RGB);
@@ -163,14 +157,14 @@ void Client::processDlibWorkerResults(const QVector<QPair<QRect, QString>>& resu
         QString buffer;
         for(const auto &it : results)
         {
-            buffer += QString(it.first.x()) + "," + QString(it.first.y()) + "," + QString(it.first.width()) + "," + QString(it.first.height()) + "," + it.second + ":";
+            buffer += QString::number(it.first.x()) + "," + QString::number(it.first.y()) + "," + QString::number(it.first.width() + it.first.x()) + "," + QString::number(it.first.height() + it.first.y()) + "," + it.second + ":";
             log(QString("Tag: \"%0\" - X: %1, Y: %2, W: %3, H: %4").arg(it.second).arg(QString::number(it.first.x())).arg(QString::number(it.first.y())).arg(QString::number(it.first.width())).arg(QString::number(it.first.height())));
         }
         buffer.chop(1);
         log("Sending found face properties to the client.");
         sendTextMessage(buffer);
 
-        if(dialogUpdateEnabled)
+        if(dialog)
         {
             // process dlib output on dialog window
             clearSecondaryDisplayTimer->stop();
