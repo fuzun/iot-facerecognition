@@ -56,7 +56,7 @@ SocketHandler::SocketHandler(QObject *parent, UIInterface *_uiInterface, ClientH
     {
         connect(webSocketServer, &QWebSocketServer::newConnection, this, &SocketHandler::onNewConnection);
         connect(webSocketServer, &QWebSocketServer::sslErrors, this, &SocketHandler::onSslErrors);
-       // connect(webSocketServer, &QWebSocketServer::acceptError, this, )
+        uiInterface->log("Started listening on port:" + QString::number(m_port));
     }
     else
     {
@@ -67,6 +67,7 @@ SocketHandler::SocketHandler(QObject *parent, UIInterface *_uiInterface, ClientH
 SocketHandler::~SocketHandler()
 {
     webSocketServer->close();
+    uiInterface->log("Stopped listening.");
 
     Server* server = dynamic_cast<Server *>(parent());
     delete server;
