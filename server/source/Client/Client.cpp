@@ -64,6 +64,8 @@ Client::Client(QObject *parent, QWebSocket* _socket, QSettings* config)
 Client::~Client()
 {
     log("Stopped processing.");
+    while(!dlibWorkerFree)
+        QApplication::processEvents();
 }
 
 void Client::throwException(const char* str)
