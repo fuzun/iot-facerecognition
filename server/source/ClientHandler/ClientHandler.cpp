@@ -45,9 +45,7 @@ void ClientHandler::newClient(QWebSocket *socket)
         return;
 
     Client *client = new Client(this, socket, config);
-
     clients.insert(socket, client);
-
     uiInterface->newClient(client);
 }
 
@@ -64,4 +62,14 @@ void ClientHandler::removeClient(QWebSocket *socket)
         delete client;
         clients.erase(it);
     }
+}
+
+bool ClientHandler::isClientPresent(const QString &name)
+{
+    for(const auto& it : clients)
+    {
+        if(it->getName() == name)
+            return true;
+    }
+    return false;
 }

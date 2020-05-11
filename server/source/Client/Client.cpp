@@ -1,4 +1,4 @@
-/*
+﻿/*
 *    iot-facerecognition-server
 *
 *    Copyright (C) 2020, fuzun
@@ -31,6 +31,7 @@
 
 #include "DLIBWorker/DLIBWorker.h"
 #include "ClientDialog/ClientDialog.h"
+#include "ClientHandler/ClientHandler.h"
 
 Client::Client(QObject *parent, QWebSocket* _socket, QSettings* config)
     : QObject(parent)
@@ -87,11 +88,18 @@ void Client::processTextMessage(const QString& string)
             // Client wants to change its name:
             case '0':
             {
+                ClientHandler* cHandler = qobject_cast<ClientHandler *>(parent());
+                QString _name = strContext;
+                if(cHandler->isClientPresent(strContext))
+                {
+                    _name.append("(1)");
+                }
+
                 if(name == "?")
                 {
-                    log("Client: " + strContext + " has connected!");
+                    log("Client: " + _name + " has connected!");
                 }
-                name = strContext;
+                name = _name;
                 emit clientNameChanged(name);
                 break;
             }

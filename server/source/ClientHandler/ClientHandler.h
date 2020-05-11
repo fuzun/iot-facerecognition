@@ -40,8 +40,7 @@ public:
     void newClient(class QWebSocket *socket);
     void removeClient(class QWebSocket *socket);
 
-
-
+    bool isClientPresent(const QString& name);
 };
 
 #endif // CLIENTHANDLER_H
