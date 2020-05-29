@@ -49,7 +49,7 @@ Please note that on Raspberry PI, the latest OpenCV-python seems to be broken so
   * QSsl::KeyAlgorithm = (int) -> Set it according to the information available in https://doc.qt.io/qt-5/qssl.html#KeyAlgorithm-enum. Default is 1 (RSA Algorithm).
   * QSsl::EncodingFormat = (int) -> Set it according to the information available in https://doc.qt.io/qt-5/qssl.html#EncodingFormat-enum. Default is 0 (PEM Format).
 * Log
-  * Enable = (boolean) -> Enables or disables logging to console and GUI (if available). Default is 1.
+  * Enable = (boolean) -> Enables or disables logging to file. Default is 1.
   * Location = (string) -> Points to the file location in which the logs are stored. Default is "log.txt".
 * DLIB
   * ReferenceFile = (string) -> Specifies the file containing reference face photos and their respective tags. iot-facerecognition-server will try to find faces that are specified in this file in the input stream. Default is "face.txt". This file should have a structure as such: <p>tag1 : photo1.jpg<br/>tag2 : photo2.jpg</p>
