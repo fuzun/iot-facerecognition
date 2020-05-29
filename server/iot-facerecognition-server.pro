@@ -2,10 +2,10 @@
 # Author: fuzun, 2020
 # License: GPLv3
 
-VERSION = 1.0.0
+VERSION = 1.1.0
 DEFINES += VER=\\\"$$VERSION\\\"
 
-QT       += core gui websockets
+QT      += core gui websockets
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -42,23 +42,39 @@ FORMS += \
     source/MainWindow/MainWindow.ui
 
 
-# dlib
-INCLUDEPATH += $$PWD/dlib
-SOURCES += dlib/dlib/all/source.cpp
-DEFINES += DLIB_NO_GUI_SUPPORT
+QMAKE_CXXFLAGS_RELEASE += /arch:AVX
+
+# CUDA
+CONFIG += CUDA_ENABLED
+if(CUDA_ENABLED) {
+    INCLUDEPATH += $$(CUDA_PATH)/include
+    win32 {
+        LIBS += -L$$(CUDA_PATH)/lib/x64
+    }
+    LIBS += -lcudnn -lcudart -lcurand -lcublas -lcusolver
+}
+
+# DLIB
+# Change below according to the build environment.
+INCLUDEPATH += $$(DLIB_DIR)/include
+win32 {
+    LIBS += -L$$(DLIB_DIR)/lib
+}
 CONFIG(debug, debug|release){
-DEFINES += ENABLE_ASSERTS
+    LIBS += -ldlibd
+} else {
+    LIBS += -ldlib
 }
 
 # OpenCV
 INCLUDEPATH += $$(OPENCV_SDK_DIR)/include
-# Change below if MSVC is not used for compiling
+# Change below if MSVC is not used for compiling. Current configuration is valid for Win64.
 OCV_COMPILER_SPECIFIC = vc15
 LIBS += -L$$(OPENCV_SDK_DIR)/x64/$$OCV_COMPILER_SPECIFIC/lib
 CONFIG(debug, debug|release){
-LIBS += -lopencv_world430d
+    LIBS += -lopencv_world430d
 } else {
-LIBS += -lopencv_world430
+    LIBS += -lopencv_world430
 }
 
 qnx: target.path = /tmp/$${TARGET}/bin
