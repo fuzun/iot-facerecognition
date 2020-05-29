@@ -25,14 +25,13 @@
 #include <QFile>
 #include <utility>
 #include <vector>
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-#include "dlib/dnn.h"
-#include "dlib/image_io.h"
-#include "dlib/image_processing/frontal_face_detector.h"
-#include "dlib/opencv.h"
+#include <dlib/image_io.h>
+#include <dlib/opencv.h>
 
 #include "config.h"
 
@@ -133,6 +132,9 @@ void DLIBWorker::generateReferenceFaceMap(const QVector<QPair<QString, QString>>
         rMap.push_back(pair);
     }
 
+    if(rMap.isEmpty())
+        throwException("Could not find any face in the given reference photos.");
+
     m_referenceFaceMap = rMap;
 }
 
@@ -169,6 +171,33 @@ void DLIBWorker::run()
                 cResults.push_back(it2);
             }
         }
+
+        QVector<QPair<QRect, QString>> removeList;
+        for(int i = 0; i < cResults.size() - 1; ++i)
+        {
+            for(int j = i + 1; j < cResults.size(); ++j)
+            {
+                const auto& i1 = cResults.at(i);
+                const auto& i2 = cResults.at(j);
+
+                if(i1.first == i2.first)
+                {
+                    if(i1.second == "" && i2.second != "")
+                        removeList.push_back(i1);
+                    else if(i1.second != "" && i2.second == "")
+                        removeList.push_back(i2);
+                    else if(i1.second == "" && i2.second == "")
+                        removeList.push_back(i2);
+                    break;
+                }
+            }
+        }
+
+        for(const auto& it : removeList)
+        {
+            cResults.removeOne(it);
+        }
+
     }
 
     emit done(cResults);

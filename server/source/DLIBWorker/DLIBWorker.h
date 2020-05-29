@@ -27,10 +27,10 @@
 #include <QVector>
 #include <QRect>
 #include <QPair>
-#include <opencv2/core/core.hpp>
 
-#include "dlib/dnn.h"
-#include "dlib/image_processing/frontal_face_detector.h"
+#include <opencv2/core/core.hpp>
+#include <dlib/dnn.h>
+#include <dlib/image_processing/frontal_face_detector.h>
 
 class DLIBWorker : public QObject, public QRunnable
 {
