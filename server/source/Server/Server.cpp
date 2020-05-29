@@ -43,7 +43,6 @@ Server::Server(QObject *parent)
         mainWindow = new MainWindow(nullptr);
         connect(mainWindow, &MainWindow::end, []()
         {
-            // fix: halt and terminate all threads before quit
             QApplication::quit();
         });
         mainWindow->show();
@@ -60,6 +59,12 @@ Server::Server(QObject *parent)
 
 Server::~Server()
 {
+    delete socketHandler;
+    delete clientHandler;
+    delete uiInterface;
+
     if(mainWindow)
+    {
         delete mainWindow;
+    }
 }
