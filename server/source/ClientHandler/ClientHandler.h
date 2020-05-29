@@ -23,18 +23,20 @@
 #include <QObject>
 #include <QHash>
 
+#include "UIInterface/UIInterface.h"
+
 class ClientHandler : public QObject
 {
     Q_OBJECT
 
 private:
     class QSettings* config;
-    class UIInterface* uiInterface;
+    UIInterface*& uiInterface;
 
     class QHash<class QWebSocket*, class Client *> clients;
 
 public:
-    explicit ClientHandler(QObject *parent, UIInterface* _uiInterface, QSettings* config);
+    explicit ClientHandler(QObject *parent, UIInterface*& _uiInterface, QSettings* config);
     ~ClientHandler();
 
     void newClient(class QWebSocket *socket);

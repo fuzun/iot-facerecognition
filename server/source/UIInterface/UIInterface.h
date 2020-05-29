@@ -23,12 +23,14 @@
 #include <QObject>
 #include <QString>
 
+#include "MainWindow/MainWindow.h"
+
 class UIInterface : public QObject
 {
     Q_OBJECT
 
 private:
-    class MainWindow* mainWindow;
+    MainWindow*& mainWindow;
 
     class QTextEdit*    serverLog;
     class QListWidget*  clientList;
@@ -45,7 +47,7 @@ private:
     QHash<class ClientDialog*, class Client *>*    clientDialogMap;
 
 public:
-    explicit UIInterface(QObject* parent, MainWindow* _mainWindow, class QSettings *config);
+    explicit UIInterface(QObject* parent, MainWindow*& _mainWindow, class QSettings *config);
     ~UIInterface();
 
     void log(const QString& string);

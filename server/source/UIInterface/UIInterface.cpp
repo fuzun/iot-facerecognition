@@ -39,7 +39,7 @@
 #include "Client/Client.h"
 #include "config.h"
 
-UIInterface::UIInterface(QObject* parent, MainWindow* _mainWindow, QSettings* config)
+UIInterface::UIInterface(QObject* parent, MainWindow *&_mainWindow, QSettings* config)
     : QObject(parent)
     , mainWindow(_mainWindow)
 {

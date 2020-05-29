@@ -24,7 +24,7 @@
 #include "Client/Client.h"
 #include "UIInterface/UIInterface.h"
 
-ClientHandler::ClientHandler(QObject *parent, UIInterface* _uiInterface, QSettings* _config)
+ClientHandler::ClientHandler(QObject *parent, UIInterface *&_uiInterface, QSettings* _config)
     : QObject(parent)
     , config(_config)
     , uiInterface(_uiInterface)

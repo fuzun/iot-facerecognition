@@ -23,13 +23,16 @@
 #include <QObject>
 #include <QSslError>
 
+#include "ClientHandler/ClientHandler.h"
+#include "UIInterface/UIInterface.h"
+
 class SocketHandler : public QObject
 {
     Q_OBJECT
 
 private:
-    class ClientHandler* clientHandler;
-    class UIInterface* uiInterface;
+    ClientHandler*& clientHandler;
+    UIInterface*&   uiInterface;
 
     unsigned short          m_port;
     QString                 m_serverName;
@@ -40,7 +43,7 @@ private:
     bool                    m_testMode;
 
 public:
-    explicit SocketHandler(QObject *parent, UIInterface* _uiInterface, ClientHandler* _clientHandler, class QSettings* config);
+    explicit SocketHandler(QObject *parent, UIInterface*& _uiInterface, ClientHandler*& _clientHandler, class QSettings* config);
     ~SocketHandler();
 
 protected:

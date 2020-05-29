@@ -15,7 +15,7 @@
 #include "UIInterface/UIInterface.h"
 #include "config.h"
 
-SocketHandler::SocketHandler(QObject *parent, UIInterface *_uiInterface, ClientHandler *_clientHandler, QSettings* config)
+SocketHandler::SocketHandler(QObject *parent, UIInterface *&_uiInterface, ClientHandler *&_clientHandler, QSettings* config)
     : QObject(parent),
       clientHandler(_clientHandler),
       uiInterface(_uiInterface)
@@ -68,9 +68,6 @@ SocketHandler::~SocketHandler()
 {
     webSocketServer->close();
     uiInterface->log("Stopped listening.");
-
-    Server* server = dynamic_cast<Server *>(parent());
-    delete server;
 }
 
 void SocketHandler::onNewConnection()
