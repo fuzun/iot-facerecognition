@@ -63,13 +63,15 @@ Client::Client(QObject *parent, QWebSocket* _socket, QSettings* config)
 
 Client::~Client()
 {
-    log("Stopped processing.");
     while(!dlibWorkerFree)
         QApplication::processEvents();
+    log("Stopped processing.");
+    socket->close();
 }
 
 void Client::throwException(const char* str)
 {
+    std::cout << "FATAL ERROR:" << str << std::endl; // Not log() because it is queued.
     throw str;
 }
 
