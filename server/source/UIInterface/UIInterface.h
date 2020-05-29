@@ -38,6 +38,9 @@ private:
     bool    m_logEnabled;
     QString m_logFile;
 
+    class QFile* logFile;
+    class QTextStream* fStream;
+
     static QString generateDateTime();
 
     void logEvent(const QString& string, class Client* client = nullptr);

@@ -30,6 +30,8 @@
 #include <QRegExp>
 #include <QCloseEvent>
 #include <QSettings>
+#include <QFile>
+#include <QTextStream>
 #include <iostream>
 
 #include "MainWindow/MainWindow.h"
@@ -48,6 +50,21 @@ UIInterface::UIInterface(QObject* parent, MainWindow *&_mainWindow, QSettings* c
     m_logFile = config->value(CONFIG_LOG_LOCATION, CONFIG_LOG_DEFAULT_LOCATION).toString();
     config->endGroup();
 
+    if(m_logEnabled)
+    {
+        logFile = new QFile(m_logFile, this);
+        if(!logFile->open(QFile::Text | QFile::Append))
+        {
+            m_logEnabled = false;
+            log("Can't write to log file. Logging to file is disabled.");
+            fStream = nullptr;
+        }
+        else
+        {
+            fStream = new QTextStream(logFile);
+        }
+    }
+
     clientList = mainWindow->ui->clientList;
     serverLog = mainWindow->ui->serverLog;
 
@@ -61,6 +78,17 @@ UIInterface::UIInterface(QObject* parent, MainWindow *&_mainWindow, QSettings* c
 
 UIInterface::~UIInterface()
 {
+    if(fStream)
+    {
+        delete fStream;
+    }
+
+    if(logFile->isOpen())
+    {
+        logFile->flush();
+        logFile->close();
+    }
+
     delete clientDialogMap;
     delete clientListItemMap;
 }
@@ -84,6 +112,7 @@ void UIInterface::logEvent(const QString& string, class Client *client)
     message += string;
     message2 += string;
 
+    QRegExp htmlTagMark("<[^>]*>");
     if(client)
     {
         if(ClientDialog* dialog = client->getDialog())
@@ -94,13 +123,21 @@ void UIInterface::logEvent(const QString& string, class Client *client)
         {
             serverLog->append(message2 + "<br/>");
         }
-        std::cout << message2.remove(QRegExp("<[^>]*>")).toStdString() << std::endl;
+        QString stripped = message2.remove(htmlTagMark);
+        std::cout << stripped.toStdString() << std::endl;
+        if(fStream)
+            *fStream << stripped << "\n";
     }
     else
     {
         if(mainWindow)
+        {
             serverLog->append(message + "<br/>");
-        std::cout << message.remove(QRegExp("<[^>]*>")).toStdString() << std::endl;
+        }
+        QString stripped = message.remove(htmlTagMark);
+        std::cout << stripped.toStdString() << std::endl;
+        if(fStream)
+            *fStream << stripped << "\n";
     }
 }
 
