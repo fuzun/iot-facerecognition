@@ -36,7 +36,7 @@ class FaceRecognition:
         self.msg = None
         self.cbackcalled = None
 
-        self.stop = False
+        self._stop = False
         self.thread1 = threading.Thread(target=self.mainloop)
         self.thread2 = threading.Thread(target=self.receiveloop)
 
@@ -51,17 +51,18 @@ class FaceRecognition:
         self.ws.send("0:" + self.clientname)
 
     def stop(self):
-        self.stop = True
-        self.thread1.join()
-        self.thread2.join()
-        self.stop = False
+        self._stop = True
 
     def start(self):
-        self.cap = cv2.VideoCapture(0)
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.capturewidth)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.captureheight)
-        self.thread1.start()
-        self.thread2.start()
+        if self._stop == True:
+            self._stop = False
+        else:
+            self.cap = cv2.VideoCapture(0)
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.capturewidth)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.captureheight)
+
+            self.thread1.start()
+            self.thread2.start()
 
     def mainloop(self):
         if self.guienabled:
@@ -72,49 +73,51 @@ class FaceRecognition:
             self.nFactorW = float(self.guiwidth) / float(self.targetwidth)
             self.nFactorH = float(self.guiheight) / float(self.targetheight)
 
-        while not self.stop:
-            ret, frame = self.cap.read()
-            frame2 = frame
+        while True:
+            if not self._stop:
+                ret, frame = self.cap.read()
+                frame2 = frame
 
-            if self.targetwidth > 0 and self.targetheight > 0 and \
-                    self.targetheight != self.captureheight and self.targetwidth != self.capturewidth:
-                frame = cv2.resize(frame, (self.targetwidth, self.targetheight), interpolation=cv2.INTER_AREA)
+                if self.targetwidth > 0 and self.targetheight > 0 and \
+                        self.targetheight != self.captureheight and self.targetwidth != self.capturewidth:
+                    frame = cv2.resize(frame, (self.targetwidth, self.targetheight), interpolation=cv2.INTER_AREA)
 
-            if self.guienabled and abs(self.guiwidth - self.capturewidth) > 5 \
-                    and abs(self.guiheight - self.captureheight) > 5:
-                frame2 = cv2.resize(frame2, (self.guiwidth, self.guiheight))
+                if self.guienabled and abs(self.guiwidth - self.capturewidth) > 5 \
+                        and abs(self.guiheight - self.captureheight) > 5:
+                    frame2 = cv2.resize(frame2, (self.guiwidth, self.guiheight))
 
-            if self.lessBandwidth is False:
-                ret2, encoded = cv2.imencode('.jpg', frame)
-            else:
-                ret2, encoded = cv2.imencode('.webp', frame)
+                if self.lessBandwidth is False:
+                    ret2, encoded = cv2.imencode('.jpg', frame)
+                else:
+                    ret2, encoded = cv2.imencode('.webp', frame)
 
-            self.ws.send_binary(encoded.tobytes())
+                self.ws.send_binary(encoded.tobytes())
 
-            if self.guienabled:
-                if time.time() - self.time < 1.5 and self.msg is not None:
-                    for msg in self.msg.split(':'):
-                        pmsg = msg.split(',')
-                        if self.callbackfunc is not None and self.cbackcalled is False:
-                            self.callbackfunc(str(pmsg[4]))
-                            self.cbackcalled = True
-                        x0 = int(pmsg[0]) * self.nFactorW
-                        x1 = int(pmsg[2]) * self.nFactorW
-                        y0 = int(pmsg[1]) * self.nFactorH
-                        y1 = int(pmsg[3]) * self.nFactorH
-                        cv2.rectangle(frame2, (int(x0), int(y0)), (int(x1), int(y1)),
-                                              (int(128), int(0), int(0)), 3)
-                        font = cv2.FONT_HERSHEY_SIMPLEX
-                        cv2.putText(frame2, str(pmsg[4]), (int(x0), int(y1 + 25)), font, 1.5, (0, 0, 200), 2,
-                                    cv2.LINE_AA)
-                cv2.imshow('facerecognition', frame2)
-                cv2.waitKey(35)  # ~30 FPS
+                if self.guienabled:
+                    if time.time() - self.time < 1.5 and self.msg is not None:
+                        for msg in self.msg.split(':'):
+                            pmsg = msg.split(',')
+                            if self.callbackfunc is not None and self.cbackcalled is False:
+                                self.callbackfunc(str(pmsg[4]))
+                                self.cbackcalled = True
+                            x0 = int(pmsg[0]) * self.nFactorW
+                            x1 = int(pmsg[2]) * self.nFactorW
+                            y0 = int(pmsg[1]) * self.nFactorH
+                            y1 = int(pmsg[3]) * self.nFactorH
+                            cv2.rectangle(frame2, (int(x0), int(y0)), (int(x1), int(y1)),
+                                                  (int(128), int(0), int(0)), 3)
+                            font = cv2.FONT_HERSHEY_SIMPLEX
+                            cv2.putText(frame2, str(pmsg[4]), (int(x0), int(y1 + 25)), font, 1.5, (0, 0, 200), 2,
+                                        cv2.LINE_AA)
+                    cv2.imshow('facerecognition', frame2)
+                    cv2.waitKey(35)  # ~30 FPS
 
     def receiveloop(self):
-        while not self.stop:
-            self.msg = self.ws.recv()
-            self.cbackcalled = False
-            self.time = time.time()
+        while True:
+            if not self._stop:
+                self.msg = self.ws.recv()
+                self.cbackcalled = False
+                self.time = time.time()
 
     def sendmessage(self, message):
         self.ws.send("1:" + message)

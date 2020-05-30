@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='iot-facerecognition-client',
-    version='1.1.1',
+    version='1.1.4',
     py_modules=['iot_facerecognition_client'],
     install_requires=['opencv-python', 'websocket-client', 'screeninfo'],
     entry_points={
