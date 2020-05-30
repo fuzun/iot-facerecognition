@@ -95,7 +95,7 @@ class FaceRecognition:
                 if time.time() - self.time < 1.5 and self.msg is not None:
                     for msg in self.msg.split(':'):
                         pmsg = msg.split(',')
-                        if self.callbackfunc is not None and self.cbackcalled is False and str(pmsg[4]) != '':
+                        if self.callbackfunc is not None and self.cbackcalled is False:
                             self.callbackfunc(str(pmsg[4]))
                             self.cbackcalled = True
                         x0 = int(pmsg[0]) * self.nFactorW
