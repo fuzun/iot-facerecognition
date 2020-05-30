@@ -24,6 +24,9 @@ class FaceRecognition:
         self.captureheight = captureheight
         self.targetwidth = targetwidth
         self.targetheight = targetheight
+        if self.targetwidth == 0 or self.targetheight == 0:
+            self.targetwidth = self.capturewidth
+            self.targetheight = self.captureheight
         self.lessBandwidth = lessbandwidth
         self.enablewstrace = enablewstrace
         self.callbackfunc = callbackfunc
@@ -52,15 +55,15 @@ class FaceRecognition:
 
     def stop(self):
         self._stop = True
+        self.cap.release()
 
     def start(self):
+        self.cap = cv2.VideoCapture(0)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.capturewidth)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.captureheight)
         if self._stop == True:
             self._stop = False
         else:
-            self.cap = cv2.VideoCapture(0)
-            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.capturewidth)
-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.captureheight)
-
             self.thread1.start()
             self.thread2.start()
 
@@ -110,7 +113,9 @@ class FaceRecognition:
                             cv2.putText(frame2, str(pmsg[4]), (int(x0), int(y1 + 25)), font, 1.5, (0, 0, 200), 2,
                                         cv2.LINE_AA)
                     cv2.imshow('facerecognition', frame2)
-                    cv2.waitKey(35)  # ~30 FPS
+                    cv2.waitKey(5)
+            else:
+                time.sleep(0.1)
 
     def receiveloop(self):
         while True:
@@ -118,6 +123,8 @@ class FaceRecognition:
                 self.msg = self.ws.recv()
                 self.cbackcalled = False
                 self.time = time.time()
+            else:
+                time.sleep(0.1)
 
     def sendmessage(self, message):
         self.ws.send("1:" + message)
