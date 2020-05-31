@@ -33,7 +33,6 @@ SocketHandler::SocketHandler(QObject *parent, UIInterface *&_uiInterface, Client
     m_serverName = config->value(CONFIG_CONN_SERVERNAME, CONFIG_CONN_DEFAULT_SERVERNAME).toString();
     config->endGroup();
 
-
     webSocketServer = new QWebSocketServer(m_serverName, QWebSocketServer::SslMode::SecureMode, this);
     uiInterface->log("QWebSocketServer is created!");
 
@@ -66,13 +65,14 @@ SocketHandler::SocketHandler(QObject *parent, UIInterface *&_uiInterface, Client
 
 SocketHandler::~SocketHandler()
 {
+    clientHandler->removeAllClients();
     webSocketServer->close();
     uiInterface->log("Stopped listening.");
 }
 
 void SocketHandler::onNewConnection()
 {
-    uiInterface->log("Connection attempt by a client...");
+    uiInterface->log("Connecting a client...");
     QWebSocket *socket = webSocketServer->nextPendingConnection();
 
     connect(socket, &QWebSocket::disconnected, this, &SocketHandler::onDisconnect);
@@ -99,7 +99,7 @@ void SocketHandler::onSslErrors(const QList<QSslError>& errors)
 
 void SocketHandler::onDisconnect()
 {
-    uiInterface->log("Disconnection attempt by a client...");
+    uiInterface->log("Disconnecting a client...");
     QWebSocket *socket = qobject_cast<QWebSocket *>(sender());
     if (socket)
     {

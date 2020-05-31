@@ -41,6 +41,7 @@ public:
 
     void newClient(class QWebSocket *socket);
     void removeClient(class QWebSocket *socket);
+    void removeAllClients(void);
 
     bool isClientPresent(const QString& name);
 };

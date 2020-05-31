@@ -46,5 +46,5 @@ void MainWindow::on_quitButton_clicked()
 
 void MainWindow::on_aboutButton_clicked()
 {
-    QMessageBox::information(this, "About...", QString("iot-facerecognition-server\nAddress: \"https://github.com/fuzun/iot-facerecognition\"\nAuthor: fuzun\nVersion: ") + VER);
+    QMessageBox::information(this, "About...", QString("iot-facerecognition-server<br/>Address: <a href=\"https://github.com/fuzun/iot-facerecognition\">GitHub Repository</a><br/>Author: fuzun<br/>Version: ") + VER);
 }

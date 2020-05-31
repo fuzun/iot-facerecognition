@@ -67,6 +67,7 @@ Client::~Client()
     while(!dlibWorkerFree)
         QApplication::processEvents();
 
+    socket->flush();
     socket->close();
 }
 
@@ -102,7 +103,7 @@ void Client::processTextMessage(const QString& string)
 
                 if(name == "?")
                 {
-                    log("Client: " + _name + " has connected!");
+                    log("Client has connected!");
                 }
                 name = _name;
                 emit clientNameChanged(name);

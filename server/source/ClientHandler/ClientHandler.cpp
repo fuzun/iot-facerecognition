@@ -32,11 +32,7 @@ ClientHandler::ClientHandler(QObject *parent, UIInterface *&_uiInterface, QSetti
 
 ClientHandler::~ClientHandler()
 {
-    for(const auto& it : clients)
-    {
-        if(it)
-            delete it;
-    }
+    removeAllClients();
 }
 
 void ClientHandler::newClient(QWebSocket *socket)
@@ -62,6 +58,16 @@ void ClientHandler::removeClient(QWebSocket *socket)
         delete client;
         clients.erase(it);
     }
+}
+
+void ClientHandler::removeAllClients()
+{
+    for(const auto& it : clients)
+    {
+        if(it)
+            delete it;
+    }
+    clients.clear();
 }
 
 bool ClientHandler::isClientPresent(const QString &name)

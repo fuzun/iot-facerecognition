@@ -64,6 +64,10 @@ UIInterface::UIInterface(QObject* parent, MainWindow *&_mainWindow, QSettings* c
             fStream = new QTextStream(logFile);
         }
     }
+    else
+    {
+        logFile = nullptr;
+    }
 
     clientList = mainWindow->ui->clientList;
     serverLog = mainWindow->ui->serverLog;
@@ -107,7 +111,7 @@ void UIInterface::logEvent(const QString& string, class Client *client)
     QString message2 = message;
     if(client)
     {
-        message2 += " <i>" + client->getName() + "</i>: ";
+        message2 += "<i>" + client->getName() + "</i>: ";
     }
     message += string;
     message2 += string;
@@ -217,7 +221,6 @@ void UIInterface::on_clientList_itemDoubleClicked(QListWidgetItem *item)
 
         client->setPrimaryDisplayItem(primary);
         client->setSecondaryDisplayItem(secondary);
-
     }
 }
 
