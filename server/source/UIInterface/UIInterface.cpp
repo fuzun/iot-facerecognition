@@ -69,14 +69,22 @@ UIInterface::UIInterface(QObject* parent, MainWindow *&_mainWindow, QSettings* c
         logFile = nullptr;
     }
 
-    clientList = mainWindow->ui->clientList;
-    serverLog = mainWindow->ui->serverLog;
-
     if(mainWindow)
     {
+        clientList = mainWindow->ui->clientList;
+        serverLog = mainWindow->ui->serverLog;
+
         clientListItemMap = new QHash<class QListWidgetItem *, class Client *>;
         clientDialogMap = new QHash<class ClientDialog *, class Client *>;
         connect(clientList, &QListWidget::itemDoubleClicked, this, &UIInterface::on_clientList_itemDoubleClicked);
+    }
+    else
+    {
+        clientList = nullptr;
+        serverLog = nullptr;
+
+        clientListItemMap = nullptr;
+        clientDialogMap = nullptr;
     }
 }
 
@@ -123,7 +131,7 @@ void UIInterface::logEvent(const QString& string, class Client *client)
         {
             dialog->ui->clientLog->append(message + "<br/>");
         }
-        if(mainWindow)
+        if(serverLog)
         {
             serverLog->append(message2 + "<br/>");
         }
@@ -134,7 +142,7 @@ void UIInterface::logEvent(const QString& string, class Client *client)
     }
     else
     {
-        if(mainWindow)
+        if(serverLog)
         {
             serverLog->append(message + "<br/>");
         }
@@ -159,7 +167,9 @@ void UIInterface::clientLog(const QString& string)
 void UIInterface::setClientName(const QString& name)
 {
     Client* client = qobject_cast<Client *>(sender());
-    client->getListWidgetItem()->setText(name);
+    auto i = client->getListWidgetItem();
+    if (i)
+        i->setText(name);
 }
 
 void UIInterface::newClient(Client *client)
@@ -167,31 +177,37 @@ void UIInterface::newClient(Client *client)
     if(!client)
         return;
 
-    QListWidgetItem* item = new QListWidgetItem(client->getName());
-    clientList->addItem(item);
-    client->setListWidgetItem(item);
-
-    clientListItemMap->insert(item, client);
-
-    connect(client, &Client::clientNameChanged, this, &UIInterface::setClientName);
     connect(client, &Client::log, this, &UIInterface::clientLog, Qt::ConnectionType::QueuedConnection);
+    connect(client, &Client::clientNameChanged, this, &UIInterface::setClientName);
+
+    if (clientList && clientListItemMap)
+    {
+        QListWidgetItem* item = new QListWidgetItem(client->getName());
+        clientList->addItem(item);
+        client->setListWidgetItem(item);
+
+        clientListItemMap->insert(item, client);
+    }
 }
 
 void UIInterface::removeClient(Client *client)
 {
-    QListWidgetItem* item = client->getListWidgetItem();
-    clientList->removeItemWidget(item);
-    clientListItemMap->remove(item);
-
-    ClientDialog* dialog = client->getDialog();
-    if(dialog)
+    if (clientList && clientListItemMap)
     {
-        client->setDialog(nullptr);
-        dialog->close();
-    }
+        QListWidgetItem* item = client->getListWidgetItem();
+        clientList->removeItemWidget(item);
+        clientListItemMap->remove(item);
 
-    client->setListWidgetItem(nullptr);
-    delete item;
+        ClientDialog* dialog = client->getDialog();
+        if(dialog)
+        {
+            client->setDialog(nullptr);
+            dialog->close();
+        }
+
+        client->setListWidgetItem(nullptr);
+        delete item;
+    }
 }
 
 void UIInterface::on_clientList_itemDoubleClicked(QListWidgetItem *item)
