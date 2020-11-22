@@ -27,6 +27,12 @@ class Client : public QObject
     Q_OBJECT
 
 private:
+    enum class Command : unsigned char
+    {
+        CHANGE_NAME = '0',
+        MESSAGE = '1'
+    };
+
     class QWebSocket* socket;
 
     QString name;

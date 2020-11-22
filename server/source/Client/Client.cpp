@@ -87,12 +87,12 @@ void Client::processTextMessage(const QString& string)
     const QString& strContext = list.at(1);
     if(strCommand.length() == 1 && strContext >= 0)
     {
-        const char cmd = strCommand.toStdString().c_str()[0];
+        const unsigned char cmd = strCommand.toStdString().c_str()[0];
 
         switch(cmd)
         {
             // Client wants to change its name:
-            case '0':
+            case (int)Command::CHANGE_NAME:
             {
                 ClientHandler* cHandler = qobject_cast<ClientHandler *>(parent());
                 QString _name = strContext;
@@ -111,7 +111,7 @@ void Client::processTextMessage(const QString& string)
             }
 
             // Client wants to send a message:
-            case '1':
+            case (int)Command::MESSAGE:
             {
                 emit log(" says: " + strContext);
                 break;
