@@ -41,12 +41,13 @@ private:
     class QGraphicsPixmapItem* secondaryDisplay;
 
     class DLIBWorker *dlibWorker;
-    bool dlibWorkerFree;
 
     class QTimer* clearSecondaryDisplayTimer;
 
     class QListWidgetItem* listItem;
     class ClientDialog* dialog;
+
+    class QThread* dlibWorkerThread;
 
 public:
     explicit Client(QObject *parent, QWebSocket* _socket, class QSettings* config);
@@ -78,6 +79,8 @@ public:
 signals:
     void clientNameChanged(const QString& name);
     void log(const QString& str);
+
+    void process(const QByteArray& buffer);
 
 };
 

@@ -42,9 +42,11 @@ Server::Server(QObject *parent)
     {
         mainWindow = new MainWindow(nullptr);
         connect(mainWindow, &MainWindow::end, []()
-        {
-            QApplication::quit();
-        });
+            {
+                QApplication::processEvents();
+                QApplication::quit();
+
+            });
         mainWindow->show();
     }
     else
@@ -59,12 +61,11 @@ Server::Server(QObject *parent)
 
 Server::~Server()
 {
-    delete socketHandler;
+    // order is important
     delete clientHandler;
+    delete socketHandler;
+
     delete uiInterface;
 
-    if(mainWindow)
-    {
-        delete mainWindow;
-    }
+    delete mainWindow;
 }

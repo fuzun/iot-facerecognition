@@ -177,7 +177,7 @@ void UIInterface::newClient(Client *client)
     if(!client)
         return;
 
-    connect(client, &Client::log, this, &UIInterface::clientLog, Qt::ConnectionType::QueuedConnection);
+    connect(client, &Client::log, this, &UIInterface::clientLog);
     connect(client, &Client::clientNameChanged, this, &UIInterface::setClientName);
 
     if (clientList && clientListItemMap)

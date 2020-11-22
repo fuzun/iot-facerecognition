@@ -26,6 +26,8 @@
 #include <QPainter>
 #include <QTimer>
 #include <QListWidgetItem>
+#include <QThread>
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc.hpp>
 
@@ -41,16 +43,17 @@ Client::Client(QObject *parent, QWebSocket* _socket, QSettings* config)
     listItem = nullptr;
     name = QString("?");
 
-    dlibWorker = new DLIBWorker(this, config);
-    dlibWorker->setAutoDelete(false);
-
-    connect(dlibWorker, &DLIBWorker::done, this, &Client::processDlibWorkerResults, Qt::QueuedConnection);
-    connect(dlibWorker, &DLIBWorker::throwException, this, &Client::throwException, Qt::QueuedConnection);
+    dlibWorkerThread = new QThread(this);
+    dlibWorker = new DLIBWorker(config);
+    dlibWorker->moveToThread(dlibWorkerThread);
+    connect(dlibWorker, &DLIBWorker::throwException, this, &Client::throwException);
+    connect(dlibWorkerThread, &QThread::finished, dlibWorker, &QObject::deleteLater);
+    connect(this, &Client::process, dlibWorker, &DLIBWorker::process);
+    connect(dlibWorker, &DLIBWorker::done, this, &Client::processDlibWorkerResults);
+    dlibWorkerThread->start();
 
     QObject::connect(socket, &QWebSocket::textMessageReceived, this, &Client::processTextMessage);
     QObject::connect(socket, &QWebSocket::binaryMessageReceived, this, &Client::processBinaryMessage);
-
-    dlibWorkerFree = true;
 
     clearSecondaryDisplayTimer = new QTimer(this);
     clearSecondaryDisplayTimer->setInterval(1000);
@@ -59,13 +62,21 @@ Client::Client(QObject *parent, QWebSocket* _socket, QSettings* config)
     });
 
     log("Started processing incoming images. (if any)");
+
+    qRegisterMetaType<QVector<QPair<QRect, QString>>>();
 }
 
 Client::~Client()
 {
     log("Stopping processing...");
-    while(!dlibWorkerFree)
+
+    dlibWorkerThread->quit();
+
+    // TODO fix this later
+    while(!dlibWorkerThread->wait(0))
+    {
         QApplication::processEvents();
+    }
 
     socket->flush();
     socket->close();
@@ -140,16 +151,10 @@ void Client::setSecondaryDisplayItem(QGraphicsPixmapItem* item)
 void Client::processBinaryMessage(const QByteArray& data)
 {
     // log("Received image frame with size: " + QString::number(data.size()) + " bytes.");
-    if(dlibWorkerFree)
+    if(!dlibWorker->isBusy())
     {
         // log("Received image frame with size: " + QString::number(data.size()) + " bytes. Processing it...");
-        dlibWorkerFree = false;
-        dlibWorker->setInputBuffer(data);
-        QThreadPool::globalInstance()->start(dlibWorker);
-    }
-    else
-    {
-        // log("Omitting the image frame since DLIB is busy");
+        emit process(data);
     }
 
     if(dialog)
@@ -213,7 +218,6 @@ void Client::processDlibWorkerResults(const QVector<QPair<QRect, QString>>& resu
             clearSecondaryDisplayTimer->start();
         }
     }
-    dlibWorkerFree = true;
 }
 
 void Client::sendTextMessage(const QString &string)

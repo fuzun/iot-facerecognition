@@ -62,10 +62,13 @@ void ClientHandler::removeClient(QWebSocket *socket)
 
 void ClientHandler::removeAllClients()
 {
-    for(const auto& it : clients)
+    if (clients.isEmpty())
+        return;
+
+    for(auto& it : clients)
     {
-        if(it)
-            delete it;
+        delete it;
+        it = nullptr;
     }
     clients.clear();
 }

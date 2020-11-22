@@ -65,7 +65,6 @@ SocketHandler::SocketHandler(QObject *parent, UIInterface *&_uiInterface, Client
 
 SocketHandler::~SocketHandler()
 {
-    clientHandler->removeAllClients();
     webSocketServer->close();
     uiInterface->log("Stopped listening.");
 }
@@ -99,11 +98,10 @@ void SocketHandler::onSslErrors(const QList<QSslError>& errors)
 
 void SocketHandler::onDisconnect()
 {
-    uiInterface->log("Disconnecting a client...");
+    uiInterface->log("A client is disconnected.");
     QWebSocket *socket = qobject_cast<QWebSocket *>(sender());
     if (socket)
     {
-        clientHandler->removeClient(socket);
         socket->deleteLater();
     }
 }

@@ -41,8 +41,8 @@ using namespace cv;
 
 using FaceMap = DLIBWorker::FaceMap;
 
-DLIBWorker::DLIBWorker(QObject *parent, class QSettings* config)
-    : QObject(parent)
+DLIBWorker::DLIBWorker(class QSettings* config)
+    : busy(false)
 {  
     config->beginGroup(CONFIG_DLIB);
     m_faceLandmarkModelFile = config->value(CONFIG_DLIB_FACELANDMARKFILE, CONFIG_DLIB_DEFAULT_FACELANDMARKFILE).toString();
@@ -138,74 +138,83 @@ void DLIBWorker::generateReferenceFaceMap(const QVector<QPair<QString, QString>>
     m_referenceFaceMap = rMap;
 }
 
-void DLIBWorker::run()
+void DLIBWorker::process(const QByteArray& buffer)
 {
-    if(m_referenceFaceMap.size() == 0)
+    if (busy)
+        return;
+
+    busy = true;
+
+    try
     {
-        if(m_refPhotoFileList.size() == 0)
+        if(m_referenceFaceMap.size() == 0)
         {
-            throwException("Reference face list is empty!");
-        }
-        else
-        {
-            detector = get_frontal_face_detector();
-            string landmarkModel = m_faceLandmarkModelFile.toStdString();
-            string recogModel = m_faceRecognitionModelFile.toStdString();
-            deserialize(landmarkModel) >> sp;
-            deserialize(recogModel) >> net;
-
-            generateReferenceFaceMap(m_refPhotoFileList);
-        }
-    }
-
-    QVector<QPair<QRect, QString>> cResults;
-    if(m_referenceFaceMap.size() > 0)
-    {
-        FaceMap faceMap = generateFaceMap(m_inputBuffer);
-
-        for(const auto& it : m_referenceFaceMap)
-        {
-            const auto& get = compareFaceMap(faceMap, it);
-            for(const auto& it2 : get)
+            if(m_refPhotoFileList.size() == 0)
             {
-                cResults.push_back(it2);
+                throwException("Reference face list is empty!");
+            }
+            else
+            {
+                detector = get_frontal_face_detector();
+                string landmarkModel = m_faceLandmarkModelFile.toStdString();
+                string recogModel = m_faceRecognitionModelFile.toStdString();
+                deserialize(landmarkModel) >> sp;
+                deserialize(recogModel) >> net;
+
+                generateReferenceFaceMap(m_refPhotoFileList);
             }
         }
 
-        QVector<QPair<QRect, QString>> removeList;
-        for(int i = 0; i < cResults.size() - 1; ++i)
+        QVector<QPair<QRect, QString>> cResults;
+        if(m_referenceFaceMap.size() > 0)
         {
-            for(int j = i + 1; j < cResults.size(); ++j)
-            {
-                const auto& i1 = cResults.at(i);
-                const auto& i2 = cResults.at(j);
+            FaceMap faceMap = generateFaceMap(buffer);
 
-                if(i1.first == i2.first)
+            for(const auto& it : m_referenceFaceMap)
+            {
+                const auto& get = compareFaceMap(faceMap, it);
+                for(const auto& it2 : get)
                 {
-                    if(i1.second == "" && i2.second != "")
-                        removeList.push_back(i1);
-                    else if(i1.second != "" && i2.second == "")
-                        removeList.push_back(i2);
-                    else if(i1.second == "" && i2.second == "")
-                        removeList.push_back(i2);
-                    break;
+                    cResults.push_back(it2);
                 }
             }
+
+            QVector<QPair<QRect, QString>> removeList;
+            for(int i = 0; i < cResults.size() - 1; ++i)
+            {
+                for(int j = i + 1; j < cResults.size(); ++j)
+                {
+                    const auto& i1 = cResults.at(i);
+                    const auto& i2 = cResults.at(j);
+
+                    if(i1.first == i2.first)
+                    {
+                        if(i1.second == "" && i2.second != "")
+                            removeList.push_back(i1);
+                        else if(i1.second != "" && i2.second == "")
+                            removeList.push_back(i2);
+                        else if(i1.second == "" && i2.second == "")
+                            removeList.push_back(i2);
+                        break;
+                    }
+                }
+            }
+
+            for(const auto& it : removeList)
+            {
+                cResults.removeOne(it);
+            }
+
         }
 
-        for(const auto& it : removeList)
-        {
-            cResults.removeOne(it);
-        }
+        busy = false;
 
+        emit done(cResults);
     }
-
-    emit done(cResults);
-}
-
-void DLIBWorker::setInputBuffer(const QByteArray &buffer)
-{
-    m_inputBuffer = buffer;
+    catch(const std::exception& e)
+    {
+        emit throwException(e.what());
+    }
 }
 
 QVector<QPair<QRect, QString>> DLIBWorker::compareFaceMap(const FaceMap& a, const QPair<QString, FaceMap> &ref)

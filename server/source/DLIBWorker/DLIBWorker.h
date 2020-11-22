@@ -21,7 +21,6 @@
 #define DLIBWORKER_H
 
 #include <QObject>
-#include <QRunnable>
 #include <QByteArray>
 #include <QString>
 #include <QVector>
@@ -32,7 +31,7 @@
 #include <dlib/dnn.h>
 #include <dlib/image_processing/frontal_face_detector.h>
 
-class DLIBWorker : public QObject, public QRunnable
+class DLIBWorker : public QObject
 {
     Q_OBJECT
 
@@ -79,7 +78,6 @@ private:
     size_t                           m_faceDetailSize;
     double                           m_faceDetailPadding;
     double                           m_threshold;
-    QByteArray                       m_inputBuffer;
     QVector<QPair<QString, FaceMap>> m_referenceFaceMap;
 
     void generateReferenceFaceMap(const QVector<QPair<QString, QString>>& filename);
@@ -88,21 +86,23 @@ private:
 
     QVector<QPair<QRect, QString>> compareFaceMap(const FaceMap& a, const QPair<QString, FaceMap> &ref);
 
-protected:
-    void run() override;
+    bool busy;
+
+public slots:
+    void process(const QByteArray& buffer);
 
 public:
-    explicit DLIBWorker(QObject *parent, class QSettings* config);
+    explicit DLIBWorker(class QSettings* config);
 
     static cv::Mat constructMatFromBuffer(const QByteArray& buffer);
-    void setInputBuffer(const QByteArray& buffer);
+
+    inline bool isBusy() const { return busy; };
 
 public:
 signals:
     void done(const QVector<QPair<QRect, QString>>& results);
 
     void throwException(const char* str);
-
 };
 
 #endif // DLIBWORKER_H
