@@ -30,8 +30,17 @@ private:
     enum class Command : unsigned char
     {
         CHANGE_NAME = '0',
-        MESSAGE = '1'
+        MESSAGE = '1',
+        MESSAGE_TAG_FACE = '2',
+        MESSAGE_TAG_OBJECT = '3'
     };
+
+    struct Settings
+    {
+        bool faceRecognitionEnabled = true;
+        bool objectRecognitionEnabled = true;
+    };
+    Settings settings;
 
     class QWebSocket* socket;
 
