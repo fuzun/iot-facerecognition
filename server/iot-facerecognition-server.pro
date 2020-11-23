@@ -2,6 +2,8 @@
 # Author: fuzun, 2020
 # License: GPLv3
 
+# TODO: Use CMake instead.
+
 VERSION = 1.1.0
 DEFINES += VER=\\\"$$VERSION\\\"
 
