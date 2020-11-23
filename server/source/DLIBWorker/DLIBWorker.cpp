@@ -26,6 +26,10 @@
 #include <utility>
 #include <vector>
 
+#ifndef DLIB_JPEG_SUPPORT
+#error "DLIB must have built-in libjpeg support enabled!"
+#endif
+
 #include <dlib/image_io.h>
 
 #include "config.h"
@@ -39,6 +43,7 @@ DLIBWorker::DLIBWorker(class QSettings* config)
     : busy(false)
 {  
     config->beginGroup(CONFIG_DLIB);
+
     m_faceLandmarkModelFile = config->value(CONFIG_DLIB_FACELANDMARKFILE, CONFIG_DLIB_DEFAULT_FACELANDMARKFILE).toString();
     m_faceRecognitionModelFile = config->value(CONFIG_DLIB_FACERECOGNITIONFILE, CONFIG_DLIB_DEFAULT_FACERECOGNITIONFILE).toString();
     m_threshold = config->value(CONFIG_DLIB_THRESHOLD, CONFIG_DLIB_DEFAULT_THRESHOLD).toDouble();
