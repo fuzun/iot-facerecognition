@@ -28,9 +28,6 @@
 #include <QListWidgetItem>
 #include <QThread>
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/imgproc.hpp>
-
 #include "DLIBWorker/DLIBWorker.h"
 #include "ClientDialog/ClientDialog.h"
 #include "ClientHandler/ClientHandler.h"
@@ -159,9 +156,9 @@ void Client::processBinaryMessage(const QByteArray& data)
 
     if(dialog)
     {
-        cv::Mat mat = DLIBWorker::constructMatFromBuffer(data);
-        cv::cvtColor(mat, mat, cv::COLOR_BGR2RGB);
-        QPixmap pixmap(QPixmap::fromImage(QImage(mat.data, mat.cols, mat.rows, mat.step, QImage::Format_RGB888)));
+        dlib::array2d<dlib::rgb_pixel> img(DLIBWorker::constructMatFromBuffer(data));
+
+        QPixmap pixmap(QPixmap::fromImage(QImage((unsigned char*)dlib::image_data(img), img.nc(), img.nr(), QImage::Format_RGB888)));
         primaryDisplay->setPixmap(pixmap);
     }
 }

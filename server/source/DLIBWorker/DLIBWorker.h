@@ -27,7 +27,6 @@
 #include <QRect>
 #include <QPair>
 
-#include <opencv2/core/core.hpp>
 #include <dlib/dnn.h>
 #include <dlib/image_processing/frontal_face_detector.h>
 
@@ -81,7 +80,7 @@ private:
     QVector<QPair<QString, FaceMap>> m_referenceFaceMap;
 
     void generateReferenceFaceMap(const QVector<QPair<QString, QString>>& filename);
-    FaceMap generateFaceMap(const QByteArray& photoData, const cv::Mat* _mat = nullptr);
+    FaceMap generateFaceMap(const QByteArray& photoData, const dlib::array2d<dlib::rgb_pixel>* _img = nullptr);
     FaceMap generateFaceMap(const QString &fileName);
 
     QVector<QPair<QRect, QString>> compareFaceMap(const FaceMap& a, const QPair<QString, FaceMap> &ref);
@@ -94,7 +93,7 @@ public slots:
 public:
     explicit DLIBWorker(class QSettings* config);
 
-    static cv::Mat constructMatFromBuffer(const QByteArray& buffer);
+    static dlib::array2d<dlib::rgb_pixel> constructMatFromBuffer(const QByteArray& buffer);
 
     inline bool isBusy() const { return busy; };
 

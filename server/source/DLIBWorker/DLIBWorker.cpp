@@ -26,18 +26,12 @@
 #include <utility>
 #include <vector>
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
-
 #include <dlib/image_io.h>
-#include <dlib/opencv.h>
 
 #include "config.h"
 
 using namespace dlib;
 using namespace std;
-using namespace cv;
 
 using FaceMap = DLIBWorker::FaceMap;
 
@@ -69,17 +63,13 @@ DLIBWorker::DLIBWorker(class QSettings* config)
     }
 }
 
-FaceMap DLIBWorker::generateFaceMap(const QByteArray& photoData, const Mat* _mat)
+FaceMap DLIBWorker::generateFaceMap(const QByteArray& photoData, const array2d<rgb_pixel>* _img)
 {
-    Mat mat;
-    if(_mat)
-        mat = *_mat;
+    array2d<rgb_pixel> matrixIm;
+    if(_img)
+        assign_image(matrixIm, *_img);
     else
-        mat = constructMatFromBuffer(photoData);
-
-    cv_image<bgr_pixel> cvIm(mat);
-    matrix<rgb_pixel> matrixIm;
-    assign_image(matrixIm, cvIm);
+        matrixIm = constructMatFromBuffer(photoData);
 
     std::vector<matrix<rgb_pixel>> extractedFaces;
     std::vector<dlib::rectangle> extractedFaces2;
@@ -111,9 +101,9 @@ FaceMap DLIBWorker::generateFaceMap(const QByteArray& photoData, const Mat* _mat
 
 FaceMap DLIBWorker::generateFaceMap(const QString& fileName)
 {
-    std::string fName = samples::findFile(fileName.toStdString());
-    Mat mat = cv::imread(fName, IMREAD_COLOR);
-    return generateFaceMap(QByteArray(), &mat);
+    array2d<rgb_pixel> img;
+    load_jpeg(img, fileName.toStdString());
+    return generateFaceMap(QByteArray(), &img);
 }
 
 void DLIBWorker::generateReferenceFaceMap(const QVector<QPair<QString, QString>>& filename)
@@ -246,11 +236,9 @@ QVector<QPair<QRect, QString>> DLIBWorker::compareFaceMap(const FaceMap& a, cons
     return ret;
 }
 
-Mat DLIBWorker::constructMatFromBuffer(const QByteArray& buffer)
+dlib::array2d<dlib::rgb_pixel> DLIBWorker::constructMatFromBuffer(const QByteArray& buffer)
 {
-    Mat mat;
-    unsigned char* _buffer = (unsigned char*)buffer.constData();
-    std::vector<unsigned char> vBuffer(_buffer, _buffer + buffer.size());
-    mat = cv::imdecode(vBuffer, IMREAD_COLOR);
-    return mat;
+    array2d<rgb_pixel> img;
+    load_jpeg(img, buffer.constData(), buffer.size());
+    return img;
 }

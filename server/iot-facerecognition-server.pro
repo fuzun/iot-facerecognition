@@ -66,17 +66,6 @@ CONFIG(debug, debug|release){
     LIBS += -ldlib
 }
 
-# OpenCV
-INCLUDEPATH += $$(OPENCV_SDK_DIR)/include
-# Change below if MSVC is not used for compiling. Current configuration is valid for Win64.
-OCV_COMPILER_SPECIFIC = vc15
-LIBS += -L$$(OPENCV_SDK_DIR)/x64/$$OCV_COMPILER_SPECIFIC/lib
-CONFIG(debug, debug|release){
-    LIBS += -lopencv_world430d
-} else {
-    LIBS += -lopencv_world430
-}
-
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
