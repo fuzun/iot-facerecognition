@@ -104,4 +104,5 @@ void SocketHandler::onDisconnect()
     {
         socket->deleteLater();
     }
+    clientHandler->removeClient(socket);
 }
