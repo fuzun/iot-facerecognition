@@ -35,10 +35,12 @@ class DLIBWorker : public QObject
     Q_OBJECT
 
 public:
-    using FaceMap = std::vector<std::pair<dlib::rectangle, dlib::matrix<float, 0, 1>>>;
+    using Face = std::tuple<QString, dlib::rectangle, dlib::matrix<float, 0, 1>>;
+    using Object = Face;
+    using Cluster = std::pair<QString, std::vector<dlib::rectangle>>;
 
 private:
-    /// <dlib-prep>
+    // <ResNet-Network> (dnn_face_recognition_ex.cpp):
     template <template <int, template<typename>class, int, typename> class block, int N, template<typename>class BN, typename SUBNET>
     using residual = dlib::add_prev1<block<N, BN, 1, dlib::tag1<SUBNET>>>;
 
@@ -66,7 +68,8 @@ private:
         dlib::max_pool<3, 3, 2, 2, dlib::relu<dlib::affine<dlib::con<32, 7, 7, 2, 2,
         dlib::input_rgb_image_sized<150>
         >>>>>>>>>>>>;
-    /// </dlib-prep>
+    // </ResNet-Network>
+
     dlib::frontal_face_detector detector;
     dlib::shape_predictor sp;
     anet_type net;
@@ -77,15 +80,14 @@ private:
     size_t                           m_faceDetailSize;
     double                           m_faceDetailPadding;
     double                           m_threshold;
-    QVector<QPair<QString, FaceMap>> m_referenceFaceMap;
+    bool                             m_busy;
 
-    void generateReferenceFaceMap(const QVector<QPair<QString, QString>>& filename);
-    FaceMap generateFaceMap(const QByteArray& photoData, const dlib::array2d<dlib::rgb_pixel>* _img = nullptr);
-    FaceMap generateFaceMap(const QString &fileName);
+    std::vector<Face> referenceFaces;
 
-    QVector<QPair<QRect, QString>> compareFaceMap(const FaceMap& a, const QPair<QString, FaceMap> &ref);
+    void setupReference(const QVector<QPair<QString, QString>>& list);
 
-    bool busy;
+    static std::vector<dlib::sample_pair> createGraph(const std::vector<Face>& faces, double threshold);
+    static std::vector<Cluster> cluster(const std::vector<dlib::sample_pair>& graph, const std::vector<Face>& faces);
 
 public slots:
     void process(const QByteArray& buffer);
@@ -93,15 +95,19 @@ public slots:
 public:
     explicit DLIBWorker(class QSettings* config);
 
-    static dlib::array2d<dlib::rgb_pixel> constructMatFromBuffer(const QByteArray& buffer);
+    static dlib::array2d<dlib::rgb_pixel> constructImgFromBuffer(const QByteArray& buffer);
 
-    inline bool isBusy() const { return busy; };
+    inline bool isBusy() const { return m_busy; };
+
+    std::vector<Face> findFaces(const dlib::array2d<dlib::rgb_pixel>& img);
+    std::vector<Face> findFaces(const QString& fileName);
 
 public:
 signals:
     void done(const QVector<QPair<QRect, QString>>& results);
+    void throwException(const std::string& str);
+    void log(const QString& str);
 
-    void throwException(const char* str);
 };
 
 #endif // DLIBWORKER_H

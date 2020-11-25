@@ -47,6 +47,7 @@ Client::Client(QObject *parent, QWebSocket* _socket, QSettings* config)
     connect(dlibWorkerThread, &QThread::finished, dlibWorker, &QObject::deleteLater);
     connect(this, &Client::process, dlibWorker, &DLIBWorker::process);
     connect(dlibWorker, &DLIBWorker::done, this, &Client::processDlibWorkerResults);
+    connect(dlibWorker, &DLIBWorker::log, this, &Client::log);
     dlibWorkerThread->start();
 
     QObject::connect(socket, &QWebSocket::textMessageReceived, this, &Client::processTextMessage);
@@ -79,9 +80,9 @@ Client::~Client()
     socket->close();
 }
 
-void Client::throwException(const char* str)
+void Client::throwException(const std::string& str)
 {
-    std::cout << "FATAL ERROR:" << str << std::endl; // Not log() because it is queued.
+    std::cout << "FATAL ERROR: " << str << std::endl;
     throw str;
 }
 
@@ -156,7 +157,7 @@ void Client::processBinaryMessage(const QByteArray& data)
 
     if(dialog)
     {
-        dlib::array2d<dlib::rgb_pixel> img(DLIBWorker::constructMatFromBuffer(data));
+        dlib::array2d<dlib::rgb_pixel> img(DLIBWorker::constructImgFromBuffer(data));
 
         QPixmap pixmap(QPixmap::fromImage(QImage((unsigned char*)dlib::image_data(img), img.nc(), img.nr(), QImage::Format_RGB888)));
         primaryDisplay->setPixmap(pixmap);

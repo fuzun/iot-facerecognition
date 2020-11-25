@@ -82,7 +82,7 @@ public slots:
 
 private slots:
     void processDlibWorkerResults(const QVector<QPair<QRect, QString>>& results);
-    void throwException(const char* str);
+    void throwException(const std::string& str);
 
 public:
 signals:
