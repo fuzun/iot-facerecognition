@@ -77,7 +77,7 @@ if __name__ == "__main__":
         port = arglist[2]
     
     faceRecognition = FaceRecognition("Raspberry-with-PIR-sensor", ipaddr, port, 1280, 720, callback, 0,
-                                   0, False, True)
+                                   0, True)
                                    
     print("Connecting to the server...")
     faceRecognition.connect()
