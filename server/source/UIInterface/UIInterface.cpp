@@ -228,8 +228,10 @@ void UIInterface::on_clientList_itemDoubleClicked(QListWidgetItem *item)
 
         QGraphicsPixmapItem* primary = new QGraphicsPixmapItem();
         QGraphicsPixmapItem* secondary = new QGraphicsPixmapItem();
+        QGraphicsPixmapItem* tertiary = new QGraphicsPixmapItem();
         scene->addItem(primary);
         scene->addItem(secondary);
+        scene->addItem(tertiary);
 
         clientDialogMap->insert(clientDialog, client);
         connect(clientDialog, &ClientDialog::sDestroy, this, &UIInterface::on_ClientDialog_destroy);
@@ -237,6 +239,7 @@ void UIInterface::on_clientList_itemDoubleClicked(QListWidgetItem *item)
 
         client->setPrimaryDisplayItem(primary);
         client->setSecondaryDisplayItem(secondary);
+        client->setTertiaryDisplayItem(tertiary);
     }
 }
 

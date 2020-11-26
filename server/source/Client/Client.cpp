@@ -32,6 +32,7 @@
 #include "ClientDialog/ClientDialog.h"
 #include "ClientHandler/ClientHandler.h"
 
+
 Client::Client(QObject *parent, QWebSocket* _socket, QSettings* config)
     : QObject(parent)
     , socket(_socket)
@@ -41,12 +42,13 @@ Client::Client(QObject *parent, QWebSocket* _socket, QSettings* config)
     name = QString("?");
 
     dlibWorkerThread = new QThread(this);
-    dlibWorker = new DLIBWorker(config);
+    dlibWorker = new DLIBWorker(config, &settings);
     dlibWorker->moveToThread(dlibWorkerThread);
     connect(dlibWorker, &DLIBWorker::throwException, this, &Client::throwException);
     connect(dlibWorkerThread, &QThread::finished, dlibWorker, &QObject::deleteLater);
     connect(this, &Client::process, dlibWorker, &DLIBWorker::process);
-    connect(dlibWorker, &DLIBWorker::done, this, &Client::processDlibWorkerResults);
+    connect(dlibWorker, &DLIBWorker::doneFace, this, &Client::processDlibWorkerFaceResults);
+    connect(dlibWorker, &DLIBWorker::doneObject, this, &Client::processDlibWorkerObjectResults);
     connect(dlibWorker, &DLIBWorker::log, this, &Client::log);
     dlibWorkerThread->start();
 
@@ -80,9 +82,14 @@ Client::~Client()
     socket->close();
 }
 
-void Client::throwException(const std::string& str)
+void Client::sendCommand(Client::Command cmd, const QString &ctx)
 {
-    std::cout << "FATAL ERROR: " << str << std::endl;
+    sendTextMessage(QString("%1:%2").arg(static_cast<unsigned char>(cmd)).arg(ctx));
+}
+
+void Client::throwException(const QString& str)
+{
+    std::cout << "FATAL ERROR: " << str.toStdString() << std::endl;
     throw str;
 }
 
@@ -101,7 +108,7 @@ void Client::processTextMessage(const QString& string)
         switch(cmd)
         {
             // Client wants to change its name:
-            case (int)Command::CHANGE_NAME:
+            case (unsigned char)Command::CHANGE_NAME:
             {
                 ClientHandler* cHandler = qobject_cast<ClientHandler *>(parent());
                 QString _name = strContext;
@@ -117,12 +124,24 @@ void Client::processTextMessage(const QString& string)
                 name = _name;
                 emit clientNameChanged(name);
                 break;
-            }
+            } 
 
             // Client wants to send a message:
-            case (int)Command::MESSAGE:
+            case (unsigned char)Command::MESSAGE:
             {
                 emit log(" says: " + strContext);
+                break;
+            }
+
+            case (unsigned char)Command::SETTING_LABELCOUNT:
+            {
+                settings.labelCount = strContext.toULongLong();
+                break;
+            }
+
+            case (unsigned char)Command::SETTING_OBJDETECTIONENABLED:
+            {
+                settings.objectDetectionEnabled = static_cast<bool>(strContext.toInt());
                 break;
             }
 
@@ -146,6 +165,11 @@ void Client::setSecondaryDisplayItem(QGraphicsPixmapItem* item)
     secondaryDisplay = item;
 }
 
+void Client::setTertiaryDisplayItem(QGraphicsPixmapItem *item)
+{
+    tertiaryDisplay = item;
+}
+
 void Client::processBinaryMessage(const QByteArray& data)
 {
     // log("Received image frame with size: " + QString::number(data.size()) + " bytes.");
@@ -164,7 +188,7 @@ void Client::processBinaryMessage(const QByteArray& data)
     }
 }
 
-void Client::processDlibWorkerResults(const QVector<QPair<QRect, QString>>& results)
+void Client::processDlibWorkerFaceResults(const QVector<QPair<QRect, QString>>& results)
 {
     // log("DLIB could not find any face in the given image frame!");
     if(results.size() > 0)
@@ -174,12 +198,12 @@ void Client::processDlibWorkerResults(const QVector<QPair<QRect, QString>>& resu
         QString buffer;
         for(const auto &it : results)
         {
-            buffer += QString::number(it.first.x()) + "," + QString::number(it.first.y()) + "," + QString::number(it.first.width() + it.first.x()) + "," + QString::number(it.first.height() + it.first.y()) + "," + it.second + ":";
+            buffer += QString::number(it.first.x()) + "," + QString::number(it.first.y()) + "," + QString::number(it.first.width() + it.first.x()) + "," + QString::number(it.first.height() + it.first.y()) + "," + it.second + "#";
             log(QString("Tag: \"%0\" - X: %1, Y: %2, W: %3, H: %4").arg(it.second).arg(QString::number(it.first.x())).arg(QString::number(it.first.y())).arg(QString::number(it.first.width())).arg(QString::number(it.first.height())));
         }
         buffer.chop(1);
         log("Sending found face properties to the client.");
-        sendTextMessage(buffer);
+        sendCommand(Command::MESSAGE_TAG_FACE, buffer);
 
         if(dialog)
         {
@@ -214,6 +238,51 @@ void Client::processDlibWorkerResults(const QVector<QPair<QRect, QString>>& resu
                 secondaryDisplay->setPixmap(pixmap);
             }
             clearSecondaryDisplayTimer->start();
+        }
+    }
+}
+
+void Client::processDlibWorkerObjectResults(const QStringList &results)
+{
+    if (results.isEmpty())
+        return;
+
+
+    QString buffer = results.join("#");
+
+    log("DLIB has found objects: " + buffer);
+    log("Sending found object properties to the client.");
+    sendCommand(Command::MESSAGE_TAG_OBJECT, buffer);
+
+    if (dialog)
+    {
+        QPixmap pixmap(primaryDisplay->pixmap().width(), primaryDisplay->pixmap().height());
+        pixmap.fill(Qt::transparent);
+
+        int counter = 0;
+        for (const auto& it : results)
+        {
+            QPainter paint(&pixmap);
+
+            QColor colorLine(128, 0, 0, 200);
+            QColor colorText(255, 255, 255, 255);
+
+            QFont font;
+            font.setPointSize(12);
+            paint.setFont(font);
+
+            const QString& str = it;
+
+            QFontMetrics fMetrics(paint.font());
+            QRect textRect(20, 20 + fMetrics.size(Qt::TextSingleLine, str).height() * counter, fMetrics.size(Qt::TextSingleLine, str).width(), fMetrics.size(Qt::TextSingleLine, str).height());
+            paint.fillRect(textRect, QBrush(colorLine));
+
+            paint.setPen(colorText);
+            paint.drawText(textRect, str);
+
+            tertiaryDisplay->setPixmap(pixmap);
+
+            ++counter;
         }
     }
 }

@@ -40,7 +40,9 @@ public:
     using Cluster = std::pair<QString, std::vector<dlib::rectangle>>;
 
 private:
-    // <ResNet-Network> (dnn_face_recognition_ex.cpp):
+    // <ResNet-Network>
+
+    // (dnn_face_recognition_ex.cpp):
     template <template <int, template<typename>class, int, typename> class block, int N, template<typename>class BN, typename SUBNET>
     using residual = dlib::add_prev1<block<N, BN, 1, dlib::tag1<SUBNET>>>;
 
@@ -68,11 +70,33 @@ private:
         dlib::max_pool<3, 3, 2, 2, dlib::relu<dlib::affine<dlib::con<32, 7, 7, 2, 2,
         dlib::input_rgb_image_sized<150>
         >>>>>>>>>>>>;
+
+    // ResNet-34 (dnn_imagenet_ex.cpp):
+
+    template <typename SUBNET> using level1 = ares<512,ares<512,ares_down<512,SUBNET>>>;
+    template <typename SUBNET> using level2 = ares<256,ares<256,ares<256,ares<256,ares<256,ares_down<256,SUBNET>>>>>>;
+    template <typename SUBNET> using level3 = ares<128,ares<128,ares<128,ares_down<128,SUBNET>>>>;
+    template <typename SUBNET> using level4 = ares<64,ares<64,ares<64,SUBNET>>>;
+
+    using anet_type_2 = dlib::loss_multiclass_log<dlib::fc<1000,dlib::avg_pool_everything<
+         level1<
+         level2<
+         level3<
+         level4<
+         dlib::max_pool<3,3,2,2,dlib::relu<dlib::affine<dlib::con<64,7,7,2,2,
+         dlib::input_rgb_image_sized<227>
+         >>>>>>>>>>>;
+
     // </ResNet-Network>
 
     dlib::frontal_face_detector detector;
     dlib::shape_predictor sp;
     anet_type net;
+
+    std::vector<std::string> labels;
+    anet_type_2 net2;
+    dlib::rand rnd;
+    dlib::softmax<anet_type_2::subnet_type> snet;
 
     QVector<QPair<QString, QString>> m_refPhotoFileList;
     QString                          m_faceLandmarkModelFile;
@@ -81,10 +105,15 @@ private:
     double                           m_faceDetailPadding;
     double                           m_threshold;
     bool                             m_busy;
+    QString                          m_imageNetClassifierFile;
+    size_t                           m_numCrops;
+
+    struct Settings* m_settings;
 
     std::vector<Face> referenceFaces;
 
     void setupReference(const QVector<QPair<QString, QString>>& list);
+    void setupImageNet();
 
     static std::vector<dlib::sample_pair> createGraph(const std::vector<Face>& faces, double threshold);
     static std::vector<Cluster> cluster(const std::vector<dlib::sample_pair>& graph, const std::vector<Face>& faces);
@@ -93,7 +122,7 @@ public slots:
     void process(const QByteArray& buffer);
 
 public:
-    explicit DLIBWorker(class QSettings* config);
+    explicit DLIBWorker(class QSettings* config, struct Settings* settings);
 
     static dlib::array2d<dlib::rgb_pixel> constructImgFromBuffer(const QByteArray& buffer);
 
@@ -102,10 +131,16 @@ public:
     std::vector<Face> findFaces(const dlib::array2d<dlib::rgb_pixel>& img);
     std::vector<Face> findFaces(const QString& fileName);
 
+    // util functions taken as is from dnn_imagenet_ex.cpp:
+    static dlib::rectangle make_random_cropping_rect_resnet(const dlib::matrix<dlib::rgb_pixel>& img, dlib::rand& rnd);
+    static void randomly_crop_images(const dlib::matrix<dlib::rgb_pixel>& img, dlib::array<dlib::matrix<dlib::rgb_pixel>>& crops, dlib::rand& rnd, long num_crops);
+
 public:
 signals:
-    void done(const QVector<QPair<QRect, QString>>& results);
-    void throwException(const std::string& str);
+    void doneFace(const QVector<QPair<QRect, QString>>& results);
+    void doneObject(const QStringList& results);
+
+    void throwException(const QString& str);
     void log(const QString& str);
 
 };

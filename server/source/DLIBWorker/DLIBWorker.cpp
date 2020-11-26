@@ -25,6 +25,8 @@
 #include <QFile>
 #include <vector>
 
+#include <Client/Client.h>
+
 #ifndef DLIB_JPEG_SUPPORT
 #error "DLIB must have built-in libjpeg support enabled!"
 #endif
@@ -39,8 +41,8 @@ using namespace std;
 
 using Face = DLIBWorker::Face;
 
-DLIBWorker::DLIBWorker(class QSettings* config)
-    : m_busy(false)
+DLIBWorker::DLIBWorker(class QSettings* config, Settings *settings)
+    : m_busy(false), m_settings(settings)
 {  
     config->beginGroup(CONFIG_DLIB);
 
@@ -50,6 +52,8 @@ DLIBWorker::DLIBWorker(class QSettings* config)
     m_faceDetailSize = config->value(CONFIG_DLIB_FACE_DETAILSIZE, CONFIG_DLIB_DEFAULT_FACE_DETAILSIZE).toUInt();
     m_faceDetailPadding = config->value(CONFIG_DLIB_FACE_PADDING, CONFIG_DLIB_DEFAULT_FACE_PADDING).toDouble();
     QString _refFile = config->value(CONFIG_DLIB_REFERENCEFACEFILE, CONFIG_DLIB_DEFAULT_REFERENCEFACEFILE).toString();
+    m_imageNetClassifierFile = config->value(CONFIG_DLIB_IMAGENETCLASSIFIERFILE, CONFIG_DLIB_DEFAULT_IMAGENETCLASSIFIERFILE).toString();
+    m_numCrops = config->value(CONFIG_DLIB_NUMCROPS, CONFIG_DLIB_DEFAULT_NUMCROPS).toULongLong();
     config->endGroup();
 
     QFile refFile(_refFile);
@@ -118,6 +122,38 @@ std::vector<Face> DLIBWorker::findFaces(const QString& fileName)
     return findFaces(img);
 }
 
+rectangle DLIBWorker::make_random_cropping_rect_resnet(const dlib::matrix<rgb_pixel> &img, dlib::rand &rnd)
+{
+    double mins = 0.466666666, maxs = 0.875;
+    auto scale = mins + rnd.get_random_double()*(maxs-mins);
+    auto size = scale*std::min(img.nr(), img.nc());
+    rectangle rect(size, size);
+
+    point offset(rnd.get_random_32bit_number()%(img.nc()-rect.width()),
+                 rnd.get_random_32bit_number()%(img.nr()-rect.height()));
+    return move_rect(rect, offset);
+}
+
+void DLIBWorker::randomly_crop_images(const dlib::matrix<rgb_pixel> &img, dlib::array<dlib::matrix<rgb_pixel> > &crops, dlib::rand &rnd, long num_crops)
+{
+    std::vector<chip_details> dets;
+    for (long i = 0; i < num_crops; ++i)
+    {
+        auto rect = make_random_cropping_rect_resnet(img, rnd);
+        dets.push_back(chip_details(rect, chip_dims(227,227)));
+    }
+
+    extract_image_chips(img, dets, crops);
+
+    for (auto&& img : crops)
+    {
+        if (rnd.get_random_double() > 0.5)
+            img = fliplr(img);
+
+        apply_random_color_offset(img, rnd);
+    }
+}
+
 std::vector<sample_pair> DLIBWorker::createGraph(const std::vector<DLIBWorker::Face> &faces, double threshold)
 {
     std::vector<sample_pair> edges;
@@ -184,6 +220,13 @@ void DLIBWorker::setupReference(const QVector<QPair<QString, QString>>& list)
     }
 }
 
+void DLIBWorker::setupImageNet()
+{
+    deserialize(m_imageNetClassifierFile.toStdString()) >> net2 >> labels;
+
+    snet.subnet() = net2.subnet();
+}
+
 void DLIBWorker::process(const QByteArray& buffer)
 {
     if (m_busy)
@@ -211,7 +254,36 @@ void DLIBWorker::process(const QByteArray& buffer)
             }
         }
 
-        auto faces = findFaces(constructImgFromBuffer(buffer));
+        auto img = constructImgFromBuffer(buffer);
+
+        if (m_settings->objectDetectionEnabled)
+        {
+            if (labels.empty())
+            {
+                setupImageNet();
+            }
+
+            matrix<rgb_pixel> crop;
+            dlib::array<matrix<rgb_pixel>> images;
+            matrix<rgb_pixel> imgMat = mat(img);
+
+            randomly_crop_images(imgMat, images, rnd, m_numCrops);
+
+            matrix<float,1,1000> p = sum_rows(mat(snet(images.begin(), images.end()))) / m_numCrops;
+
+            QStringList result;
+
+            for (size_t k = 0; k < m_settings->labelCount; ++k)
+            {
+                unsigned long predicted_label = index_of_max(p);
+                result.append(QString::number(p(predicted_label)) + ": " + QString::fromStdString(labels[predicted_label]));
+                p(predicted_label) = 0;
+            }
+
+            emit doneObject(result);
+        }
+
+        auto faces = findFaces(img);
 
         rectangle rect;
         for (const auto& face : referenceFaces)
@@ -235,7 +307,7 @@ void DLIBWorker::process(const QByteArray& buffer)
         }
 
         m_busy = false;
-        emit done(linearFaces);
+        emit doneFace(linearFaces);
     }
     catch(const std::exception& e)
     {

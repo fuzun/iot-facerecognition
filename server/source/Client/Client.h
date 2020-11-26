@@ -22,6 +22,12 @@
 
 #include <QObject>
 
+struct Settings
+{
+    std::atomic<bool> objectDetectionEnabled = true;
+    std::atomic<size_t> labelCount = 5;
+};
+
 class Client : public QObject
 {
     Q_OBJECT
@@ -29,17 +35,14 @@ class Client : public QObject
 private:
     enum class Command : unsigned char
     {
-        CHANGE_NAME = '0',
-        MESSAGE = '1',
-        MESSAGE_TAG_FACE = '2',
-        MESSAGE_TAG_OBJECT = '3'
+        CHANGE_NAME = 1,
+        MESSAGE = 2,
+        MESSAGE_TAG_FACE = 3,
+        MESSAGE_TAG_OBJECT = 4,
+        SETTING_OBJDETECTIONENABLED = 5,
+        SETTING_LABELCOUNT = 6
     };
 
-    struct Settings
-    {
-        bool faceRecognitionEnabled = true;
-        bool objectRecognitionEnabled = true;
-    };
     Settings settings;
 
     class QWebSocket* socket;
@@ -48,6 +51,7 @@ private:
 
     class QGraphicsPixmapItem* primaryDisplay;
     class QGraphicsPixmapItem* secondaryDisplay;
+    class QGraphicsPixmapItem* tertiaryDisplay;
 
     class DLIBWorker *dlibWorker;
 
@@ -58,6 +62,8 @@ private:
 
     class QThread* dlibWorkerThread;
 
+    void sendCommand(Command cmd, const QString& ctx);
+
 public:
     explicit Client(QObject *parent, QWebSocket* _socket, class QSettings* config);
     ~Client();
@@ -67,6 +73,7 @@ public:
 
     void setPrimaryDisplayItem(QGraphicsPixmapItem* item);
     void setSecondaryDisplayItem(QGraphicsPixmapItem* item);
+    void setTertiaryDisplayItem(QGraphicsPixmapItem* item);
 
     QString getName() const;
 
@@ -81,8 +88,10 @@ public slots:
     void processBinaryMessage(const QByteArray& data);
 
 private slots:
-    void processDlibWorkerResults(const QVector<QPair<QRect, QString>>& results);
-    void throwException(const std::string& str);
+    void processDlibWorkerFaceResults(const QVector<QPair<QRect, QString>>& results);
+    void processDlibWorkerObjectResults(const QStringList& results);
+
+    void throwException(const QString& str);
 
 public:
 signals:
