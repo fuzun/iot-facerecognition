@@ -10,12 +10,22 @@ import screeninfo
 import time
 import threading
 import sys
-
+from enum import IntEnum
 
 class FaceRecognition:
+
+    class Command(IntEnum): # should be in sync with Server's Client::Command enum class
+        CHANGE_NAME = 1,
+        MESSAGE = 2,
+        MESSAGE_TAG_FACE = 3,
+        MESSAGE_TAG_OBJECT = 4,
+        SETTING_OBJDETECTIONENABLED = 5,
+        SETTING_LABELCOUNT = 6
+            
     def __init__(self, clientname, ipaddress, port, capturewidth, captureheight, callbackfunc=None,
-                 targetwidth=0, targetheight=0, lessbandwidth=False, guienabled=False,
+                 targetwidth=0, targetheight=0, guienabled=False,
                  enablewstrace=False, allowselfsign=True):
+
         self.clientname = clientname
         self.ipaddress = ipaddress
         self.port = port
@@ -27,7 +37,6 @@ class FaceRecognition:
         if self.targetwidth == 0 or self.targetheight == 0:
             self.targetwidth = self.capturewidth
             self.targetheight = self.captureheight
-        self.lessBandwidth = lessbandwidth
         self.enablewstrace = enablewstrace
         self.callbackfunc = callbackfunc
         self.guienabled = guienabled
@@ -43,6 +52,9 @@ class FaceRecognition:
         self.thread1 = threading.Thread(target=self.mainloop)
         self.thread2 = threading.Thread(target=self.receiveloop)
 
+    def sendCommand(self, cmd, ctx):
+        self.ws.send(chr(int(cmd)) + ":" + str(ctx))
+
     def connect(self):
         if self.enablewstrace:
             websocket.enableTrace(True)
@@ -51,7 +63,7 @@ class FaceRecognition:
         else:
             self.ws = websocket.WebSocket()
         self.ws.connect("wss://" + str(self.ipaddress) + ":" + str(self.port))
-        self.ws.send("0:" + self.clientname)
+        self.sendCommand(FaceRecognition.Command.CHANGE_NAME, self.clientname)
 
     def stop(self):
         self._stop = True
@@ -89,29 +101,37 @@ class FaceRecognition:
                         and abs(self.guiheight - self.captureheight) > 5:
                     frame2 = cv2.resize(frame2, (self.guiwidth, self.guiheight))
 
-                if self.lessBandwidth is False:
-                    ret2, encoded = cv2.imencode('.jpg', frame)
-                else:
-                    ret2, encoded = cv2.imencode('.webp', frame)
+                ret2, encoded = cv2.imencode('.jpg', frame)
 
                 self.ws.send_binary(encoded.tobytes())
 
                 if self.guienabled:
                     if time.time() - self.time < 1.5 and self.msg is not None:
-                        for msg in self.msg.split(':'):
-                            pmsg = msg.split(',')
-                            if self.callbackfunc is not None and self.cbackcalled is False:
-                                self.callbackfunc(str(pmsg[4]))
-                                self.cbackcalled = True
-                            x0 = int(pmsg[0]) * self.nFactorW
-                            x1 = int(pmsg[2]) * self.nFactorW
-                            y0 = int(pmsg[1]) * self.nFactorH
-                            y1 = int(pmsg[3]) * self.nFactorH
-                            cv2.rectangle(frame2, (int(x0), int(y0)), (int(x1), int(y1)),
-                                                  (int(128), int(0), int(0)), 3)
-                            font = cv2.FONT_HERSHEY_SIMPLEX
-                            cv2.putText(frame2, str(pmsg[4]), (int(x0), int(y1 + 25)), font, 1.5, (0, 0, 200), 2,
-                                        cv2.LINE_AA)
+                        cmd = int(self.msg.split(':')[0])
+                        ctx = self.msg[2:]
+                        if cmd is int(FaceRecognition.Command.MESSAGE_TAG_FACE):
+                            for msg in ctx.split('#'):
+                                pmsg = msg.split(',')
+                                if self.callbackfunc is not None and self.cbackcalled is False:
+                                    self.callbackfunc(str(pmsg[4]))
+                                    self.cbackcalled = True
+                                x0 = int(pmsg[0]) * self.nFactorW
+                                x1 = int(pmsg[2]) * self.nFactorW
+                                y0 = int(pmsg[1]) * self.nFactorH
+                                y1 = int(pmsg[3]) * self.nFactorH
+                                cv2.rectangle(frame2, (int(x0), int(y0)), (int(x1), int(y1)),
+                                                      (int(128), int(0), int(0)), 3)
+                                font = cv2.FONT_HERSHEY_SIMPLEX
+                                cv2.putText(frame2, str(pmsg[4]), (int(x0), int(y1 + 25)), font, 1.5, (0, 0, 200), 2,
+                                            cv2.LINE_AA)
+                        elif cmd is int(FaceRecognition.Command.MESSAGE_TAG_OBJECT):
+                            counter = 0
+                            for msg in ctx.split('#'):
+                                font = cv2.FONT_HERSHEY_SIMPLEX
+                                cv2.putText(frame2, str(msg), (int(20), int(20 + counter * 20)), font, 0.5, (0, 0, 200), 1,
+                                            cv2.LINE_AA)
+                                counter = counter + 1
+
                     cv2.imshow('facerecognition', frame2)
                     cv2.waitKey(5)
             else:
@@ -127,7 +147,7 @@ class FaceRecognition:
                 time.sleep(0.1)
 
     def sendmessage(self, message):
-        self.ws.send("1:" + message)
+        self.sendCommand(FaceRecognition.Command.MESSAGE, message)
 
 
 def main():
@@ -141,7 +161,6 @@ def main():
     capheight = 1080
     targetwidth = 1280
     targetheight = 720
-    lessbandwidth = False
 
     if arglen >= 2:
         clientname = arglist[1]
@@ -154,11 +173,9 @@ def main():
     if arglen >= 8:
         targetwidth = int(arglist[6])
         targetheight = int(arglist[7])
-    if arglen >= 9:
-        lessbandwidth = bool(arglist[8])
 
     frecognition = FaceRecognition(clientname, ipaddr, port, capwidth, capheight, None, targetwidth,
-                                   targetheight, lessbandwidth, True)
+                                   targetheight, True)
     frecognition.connect()
     frecognition.start()
 
