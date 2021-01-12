@@ -84,7 +84,7 @@ Client::~Client()
 
 void Client::sendCommand(Client::Command cmd, const QString &ctx)
 {
-    sendTextMessage(QString("%1:%2").arg(static_cast<unsigned char>(cmd)).arg(ctx));
+    sendTextMessage(QString("%1:%2").arg(QChar(static_cast<unsigned char>(cmd))).arg(ctx));
 }
 
 void Client::throwException(const QString& str)
