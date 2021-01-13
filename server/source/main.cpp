@@ -27,8 +27,6 @@ int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
 
-    Q_INIT_RESOURCE(Assets);
-
     QCoreApplication::setOrganizationName("github.com/fuzun");
     QCoreApplication::setApplicationName("iot-facerecognition-server");
     QCoreApplication::setApplicationVersion(VERSION);

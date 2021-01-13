@@ -31,7 +31,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if (MSVC)
         add_definitions(/bigobj)
         add_definitions(/FS)
-		add_definitions(/arch:AVX)
+        add_definitions(/arch:AVX)
 endif (MSVC)
 
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Widgets WebSockets REQUIRED)
@@ -50,7 +50,6 @@ set(PROJECT_SOURCES
 		
 		source/ClientDialog/ClientDialog.ui
 		source/MainWindow/MainWindow.ui
-		assets/Assets.qrc
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
@@ -72,6 +71,10 @@ endif()
 # copy config file
 # TODO: generate config file dynamically
 configure_file(config.ini config.ini COPYONLY)
+
+# copy self-signed test certificate
+configure_file(test.crt test.crt COPYONLY)
+configure_file(test.key test.key COPYONLY)
 
 include(FetchContent)
 FetchContent_Declare(dlib
