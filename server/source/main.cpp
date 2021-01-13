@@ -21,6 +21,8 @@
 
 #include <QApplication>
 
+#include "config.h"
+
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
@@ -29,7 +31,7 @@ int main(int argc, char *argv[])
 
     QCoreApplication::setOrganizationName("github.com/fuzun");
     QCoreApplication::setApplicationName("iot-facerecognition-server");
-    QCoreApplication::setApplicationVersion(VER);
+    QCoreApplication::setApplicationVersion(VERSION);
 
     Server server(nullptr);
 

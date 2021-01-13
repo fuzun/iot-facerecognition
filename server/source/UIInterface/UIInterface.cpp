@@ -35,9 +35,9 @@
 #include <iostream>
 
 #include "MainWindow/MainWindow.h"
-#include "ui_MainWindow.h"
+#include "../MainWindow/ui_MainWindow.h"
 #include "ClientDialog/ClientDialog.h"
-#include "ui_ClientDialog.h"
+#include "../ClientDialog/ui_ClientDialog.h"
 #include "Client/Client.h"
 #include "config.h"
 

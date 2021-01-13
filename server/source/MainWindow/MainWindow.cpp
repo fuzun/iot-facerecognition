@@ -25,13 +25,15 @@
 
 #include "Server/Server.h"
 
+#include "config.h"
+
 MainWindow::MainWindow(QWidget *parent, Server *_server)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
     , server(_server)
 {
     ui->setupUi(this);
-    setWindowTitle(windowTitle() + " - v" + VER);
+    setWindowTitle(windowTitle() + " - v" + VERSION);
 }
 
 MainWindow::~MainWindow()
@@ -46,5 +48,5 @@ void MainWindow::on_quitButton_clicked()
 
 void MainWindow::on_aboutButton_clicked()
 {
-    QMessageBox::information(this, "About...", QString("iot-facerecognition-server<br/>Address: <a href=\"https://github.com/fuzun/iot-facerecognition\">GitHub Repository</a><br/>Author: fuzun<br/>Version: ") + VER);
+    QMessageBox::information(this, "About...", QString("iot-facerecognition-server<br/>Address: <a href=\"https://github.com/fuzun/iot-facerecognition\">GitHub Repository</a><br/>Author: fuzun<br/>Version: ") + VERSION);
 }
