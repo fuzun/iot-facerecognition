@@ -22,7 +22,13 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <widget class="QListWidget" name="clientList"/>
+     <widget class="QListWidget" name="clientList">
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+     </widget>
     </item>
     <item>
      <widget class="QTextEdit" name="serverLog">
