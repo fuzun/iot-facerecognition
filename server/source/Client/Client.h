@@ -47,7 +47,7 @@ private:
 
     class QWebSocket* socket;
 
-    QString name;
+    QString name {"?"};
 
     class QGraphicsPixmapItem* primaryDisplay;
     class QGraphicsPixmapItem* secondaryDisplay;
@@ -57,8 +57,8 @@ private:
 
     class QTimer* clearSecondaryDisplayTimer;
 
-    class QListWidgetItem* listItem;
-    class ClientDialog* dialog;
+    class QListWidgetItem* listItem = nullptr;
+    class ClientDialog* dialog = nullptr;
 
     class QThread* dlibWorkerThread;
 

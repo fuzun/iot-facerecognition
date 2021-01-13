@@ -37,10 +37,6 @@ Client::Client(QObject *parent, QWebSocket* _socket, QSettings* config)
     : QObject(parent)
     , socket(_socket)
 {
-    dialog = nullptr;
-    listItem = nullptr;
-    name = QString("?");
-
     dlibWorkerThread = new QThread(this);
     dlibWorker = new DLIBWorker(config, &settings);
     dlibWorker->moveToThread(dlibWorkerThread);
