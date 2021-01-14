@@ -117,7 +117,7 @@ void Client::processTextMessage(const QString& string)
     switch(command)
     {
         // Client wants to change its name:
-        case (unsigned int)Command::CHANGE_NAME:
+        case (unsigned int)Command::SETTING_NAME:
         {
 //            ClientHandler* cHandler = qobject_cast<ClientHandler *>(parent());
             QString _name = context.toString();
@@ -135,6 +135,8 @@ void Client::processTextMessage(const QString& string)
 //            }
             name = _name;
             emit clientNameChanged(name);
+
+            sendCommand(Command::SETTING_NAME, name);
             break;
         }
 
@@ -149,6 +151,7 @@ void Client::processTextMessage(const QString& string)
         {
             settings.labelCount = context.toULongLong();
 
+            sendCommand(Command::SETTING_LABELCOUNT, settings.labelCount.load());
             break;
         }
 
@@ -156,6 +159,7 @@ void Client::processTextMessage(const QString& string)
         {
             settings.objectDetectionEnabled = context.toBool();
 
+            sendCommand(Command::SETTING_LABELCOUNT, settings.objectDetectionEnabled.load());
             break;
         }
 

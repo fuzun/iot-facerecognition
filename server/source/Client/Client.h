@@ -35,7 +35,7 @@ class Client : public QObject
 private:
     enum class Command : unsigned int
     {
-        CHANGE_NAME = 1,
+        SETTING_NAME = 1,
         MESSAGE = 2,
         MESSAGE_TAG_FACE = 3,
         MESSAGE_TAG_OBJECT = 4,
