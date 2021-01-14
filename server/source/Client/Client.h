@@ -33,14 +33,14 @@ class Client : public QObject
     Q_OBJECT
 
 private:
-    enum class Command : unsigned char
+    enum class Command : unsigned int
     {
         CHANGE_NAME = 1,
         MESSAGE = 2,
         MESSAGE_TAG_FACE = 3,
         MESSAGE_TAG_OBJECT = 4,
         SETTING_OBJDETECTIONENABLED = 5,
-        SETTING_LABELCOUNT = 6
+        SETTING_LABELCOUNT = 6,
     };
 
     Settings settings;
@@ -62,7 +62,7 @@ private:
 
     class QThread* dlibWorkerThread;
 
-    void sendCommand(Command cmd, const QString& ctx);
+    void sendCommand(Command cmd, const QVariant& ctx);
 
 public:
     explicit Client(QObject *parent, QWebSocket* _socket, class QSettings* config);

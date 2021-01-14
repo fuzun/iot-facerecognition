@@ -27,6 +27,9 @@
 #include <QTimer>
 #include <QListWidgetItem>
 #include <QThread>
+#include <QJsonObject>
+#include <QJsonDocument>
+#include <QJsonArray>
 
 #include "DLIBWorker/DLIBWorker.h"
 #include "ClientDialog/ClientDialog.h"
@@ -78,9 +81,16 @@ Client::~Client()
     socket->close();
 }
 
-void Client::sendCommand(Client::Command cmd, const QString &ctx)
+void Client::sendCommand(Client::Command cmd, const QVariant &ctx)
 {
-    sendTextMessage(QString("%1:%2").arg(QChar(static_cast<unsigned char>(cmd))).arg(ctx));
+    QJsonObject obj;
+
+    obj["command"] = static_cast<int>(cmd);
+    obj["context"] = QJsonValue::fromVariant(ctx);
+
+    QJsonDocument jDoc(obj);
+
+    sendTextMessage(QString(jDoc.toJson(QJsonDocument::JsonFormat::Compact)));
 }
 
 void Client::throwException(const QString& str)
@@ -91,58 +101,65 @@ void Client::throwException(const QString& str)
 
 void Client::processTextMessage(const QString& string)
 {
-    QStringList list = string.split(":");
-    if(list.size() != 2)
+    QJsonDocument jDoc = QJsonDocument::fromJson(string.toUtf8());
+
+    if (jDoc.isNull() || jDoc.isEmpty() || !jDoc.isObject())
         return;
 
-    const QString& strCommand = list.at(0);
-    const QString& strContext = list.at(1);
-    if(strCommand.length() == 1 && strContext >= 0)
+    const unsigned int command = (unsigned)(jDoc["command"].toInt(-1));
+
+    QJsonValue ctxVal = jDoc["context"];
+    QVariant context;
+
+    if (ctxVal != QJsonValue::Undefined)
+        context = ctxVal.toVariant();
+
+    switch(command)
     {
-        const unsigned char cmd = strCommand.toStdString().c_str()[0];
-
-        switch(cmd)
+        // Client wants to change its name:
+        case (unsigned int)Command::CHANGE_NAME:
         {
-            // Client wants to change its name:
-            case (unsigned char)Command::CHANGE_NAME:
-            {
-                ClientHandler* cHandler = qobject_cast<ClientHandler *>(parent());
-                QString _name = strContext;
-                if(cHandler->isClientPresent(strContext))
-                {
-                    _name.append("(1)");
-                }
-
-                if(name == "?")
-                {
-                    log("Client has connected!");
-                }
-                name = _name;
-                emit clientNameChanged(name);
+//            ClientHandler* cHandler = qobject_cast<ClientHandler *>(parent());
+            QString _name = context.toString();
+            if (_name == name)
                 break;
-            } 
 
-            // Client wants to send a message:
-            case (unsigned char)Command::MESSAGE:
-            {
-                emit log(" says: " + strContext);
-                break;
-            }
+//            if(cHandler->isClientPresent(_name))
+//            {
+//                _name.append("(1)");
+//            }
 
-            case (unsigned char)Command::SETTING_LABELCOUNT:
-            {
-                settings.labelCount = strContext.toULongLong();
-                break;
-            }
-
-            case (unsigned char)Command::SETTING_OBJDETECTIONENABLED:
-            {
-                settings.objectDetectionEnabled = static_cast<bool>(strContext.toInt());
-                break;
-            }
-
-            // implement later ...
+//            if(name == "?")
+//            {
+//                log("Client has connected!");
+//            }
+            name = _name;
+            emit clientNameChanged(name);
+            break;
         }
+
+        // Client wants to send a message:
+        case (unsigned int)Command::MESSAGE:
+        {
+            emit log(" says: " + context.toString());
+            break;
+        }
+
+        case (unsigned int)Command::SETTING_LABELCOUNT:
+        {
+            settings.labelCount = context.toULongLong();
+
+            break;
+        }
+
+        case (unsigned int)Command::SETTING_OBJDETECTIONENABLED:
+        {
+            settings.objectDetectionEnabled = context.toBool();
+
+            break;
+        }
+
+        // implement later ...
     }
 }
 
@@ -186,20 +203,38 @@ void Client::processBinaryMessage(const QByteArray& data)
 
 void Client::processDlibWorkerFaceResults(const QVector<QPair<QRect, QString>>& results)
 {
-    // log("DLIB could not find any face in the given image frame!");
+    // log("DLIB could not find any face in the given image frame!"); // this bloats the log
     if(results.size() > 0)
     {
         log("DLIB has found faces with following properties:");
+
         // send dlib output to client
-        QString buffer;
+        QVariantList ctx;
         for(const auto &it : results)
         {
-            buffer += QString::number(it.first.x()) + "," + QString::number(it.first.y()) + "," + QString::number(it.first.width() + it.first.x()) + "," + QString::number(it.first.height() + it.first.y()) + "," + it.second + "#";
-            log(QString("Tag: \"%0\" - X: %1, Y: %2, W: %3, H: %4").arg(it.second).arg(QString::number(it.first.x())).arg(QString::number(it.first.y())).arg(QString::number(it.first.width())).arg(QString::number(it.first.height())));
+            QVariantHash i;
+            int x = it.first.x();
+            int y = it.first.y();
+            int width = it.first.width();
+            int height = it.first.height();
+            QString tag = it.second;
+
+            i["x"] = x;
+            i["y"] = y;
+            i["width"] = width;
+            i["height"] = height;
+            i["tag"] = tag;
+
+            ctx.push_back(i);
+            log(QString("Tag: \"%0\" - X: %1, Y: %2, W: %3, H: %4")
+                    .arg(tag)
+                    .arg(x)
+                    .arg(y)
+                    .arg(width)
+                    .arg(height));
         }
-        buffer.chop(1);
         log("Sending found face properties to the client.");
-        sendCommand(Command::MESSAGE_TAG_FACE, buffer);
+        sendCommand(Command::MESSAGE_TAG_FACE, ctx);
 
         if(dialog)
         {
@@ -243,12 +278,9 @@ void Client::processDlibWorkerObjectResults(const QStringList &results)
     if (results.isEmpty())
         return;
 
-
-    QString buffer = results.join("#");
-
-    log("DLIB has found objects: " + buffer);
+    log("DLIB has found objects: " + results.join(", "));
     log("Sending found object properties to the client.");
-    sendCommand(Command::MESSAGE_TAG_OBJECT, buffer);
+    sendCommand(Command::MESSAGE_TAG_OBJECT, results);
 
     if (dialog)
     {

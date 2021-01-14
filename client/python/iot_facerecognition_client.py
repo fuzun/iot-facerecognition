@@ -10,6 +10,7 @@ import screeninfo
 import time
 import threading
 import sys
+import json
 from enum import IntEnum
 
 class FaceRecognition:
@@ -42,10 +43,10 @@ class FaceRecognition:
         self.guienabled = guienabled
         self.allowselfsign = allowselfsign
 
-        self.time = 0
+        self.time = [0, 0]
         self.cap = None
         self.ws = None
-        self.msg = None
+        self.msg = [None, None]
         self.cbackcalled = None
 
         self._stop = False
@@ -106,32 +107,32 @@ class FaceRecognition:
                 self.ws.send_binary(encoded.tobytes())
 
                 if self.guienabled:
-                    if time.time() - self.time < 1.5 and self.msg is not None:
-                        cmd = int(self.msg.split(':')[0])
-                        ctx = self.msg[2:]
-                        if cmd is int(FaceRecognition.Command.MESSAGE_TAG_FACE):
-                            for msg in ctx.split('#'):
-                                pmsg = msg.split(',')
-                                if self.callbackfunc is not None and self.cbackcalled is False:
-                                    self.callbackfunc(str(pmsg[4]))
-                                    self.cbackcalled = True
-                                x0 = int(pmsg[0]) * self.nFactorW
-                                x1 = int(pmsg[2]) * self.nFactorW
-                                y0 = int(pmsg[1]) * self.nFactorH
-                                y1 = int(pmsg[3]) * self.nFactorH
-                                cv2.rectangle(frame2, (int(x0), int(y0)), (int(x1), int(y1)),
-                                                      (int(128), int(0), int(0)), 3)
-                                font = cv2.FONT_HERSHEY_SIMPLEX
-                                cv2.putText(frame2, str(pmsg[4]), (int(x0), int(y1 + 25)), font, 1.5, (0, 0, 200), 2,
-                                            cv2.LINE_AA)
-                        elif cmd is int(FaceRecognition.Command.MESSAGE_TAG_OBJECT):
-                            counter = 0
-                            for msg in ctx.split('#'):
-                                font = cv2.FONT_HERSHEY_SIMPLEX
-                                cv2.putText(frame2, str(msg), (int(20), int(20 + counter * 20)), font, 0.5, (0, 0, 200), 1,
-                                            cv2.LINE_AA)
-                                counter = counter + 1
-
+                    if time.time() - self.time[0] < 0.75 and self.msg[0] is not None:
+                        for msg in self.msg[0]:
+                            tag = str(msg["tag"])
+                            x = int(msg["x"])
+                            y = int(msg["y"])
+                            width = int(msg["width"])
+                            height = int(msg["height"])
+                            if self.callbackfunc is not None and self.cbackcalled is False:
+                                self.callbackfunc(tag)
+                                self.cbackcalled = True
+                            x0 = x * self.nFactorW
+                            x1 = (x + width) * self.nFactorW
+                            y0 = y * self.nFactorH
+                            y1 = (y + height) * self.nFactorH
+                            cv2.rectangle(frame2, (int(x0), int(y0)), (int(x1), int(y1)),
+                                                  (int(128), int(0), int(0)), 3)
+                            font = cv2.FONT_HERSHEY_SIMPLEX
+                            cv2.putText(frame2, tag, (int(x0), int(y1 + 25)), font, 1.5, (0, 0, 200), 2,
+                                        cv2.LINE_AA)
+                    if time.time() - self.time[1] < 0.75 and self.msg[1] is not None:
+                        counter = 0
+                        for msg in self.msg[1]:
+                            font = cv2.FONT_HERSHEY_SIMPLEX
+                            cv2.putText(frame2, str(msg), (int(20), int(20 + counter * 20)), font, 0.5, (0, 0, 200), 1,
+                                        cv2.LINE_AA)
+                            counter = counter + 1
                     cv2.imshow('facerecognition', frame2)
                     cv2.waitKey(5)
             else:
@@ -140,9 +141,20 @@ class FaceRecognition:
     def receiveloop(self):
         while True:
             if not self._stop:
-                self.msg = self.ws.recv()
+                receive = self.ws.recv()
+
+                jdoc = json.loads(receive)
+                cmd = jdoc["command"]
+                ctx = jdoc["context"]
+
+                if cmd is int(FaceRecognition.Command.MESSAGE_TAG_FACE):
+                    self.msg[0] = ctx
+                    self.time[0] = time.time()
+                elif cmd is int(FaceRecognition.Command.MESSAGE_TAG_OBJECT):
+                    self.msg[1] = ctx
+                    self.time[1] = time.time()
+
                 self.cbackcalled = False
-                self.time = time.time()
             else:
                 time.sleep(0.1)
 
