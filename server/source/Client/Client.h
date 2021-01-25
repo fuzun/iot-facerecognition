@@ -21,6 +21,7 @@
 #define CLIENT_H
 
 #include <QObject>
+#include <QVariant>
 
 struct Settings
 {
@@ -40,7 +41,7 @@ private:
         MESSAGE_TAG_FACE = 3,
         MESSAGE_TAG_OBJECT = 4,
         SETTING_OBJDETECTIONENABLED = 5,
-        SETTING_LABELCOUNT = 6,
+        SETTING_LABELCOUNT = 6
     };
 
     Settings settings;
@@ -62,7 +63,7 @@ private:
 
     class QThread* dlibWorkerThread;
 
-    void sendCommand(Command cmd, const QVariant& ctx);
+    void sendCommand(Command cmd, const QVariant& ctx = QVariant());
 
 public:
     explicit Client(QObject *parent, QWebSocket* _socket, class QSettings* config);

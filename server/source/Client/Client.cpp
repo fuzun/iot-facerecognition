@@ -35,11 +35,12 @@
 #include "ClientDialog/ClientDialog.h"
 #include "ClientHandler/ClientHandler.h"
 
-
 Client::Client(QObject *parent, QWebSocket* _socket, QSettings* config)
     : QObject(parent)
     , socket(_socket)
 {
+    qRegisterMetaType<QVector<QPair<QRect, QString>>>();
+
     dlibWorkerThread = new QThread(this);
     dlibWorker = new DLIBWorker(config, &settings);
     dlibWorker->moveToThread(dlibWorkerThread);
@@ -61,8 +62,6 @@ Client::Client(QObject *parent, QWebSocket* _socket, QSettings* config)
     });
 
     log("Started processing incoming images. (if any)");
-
-    qRegisterMetaType<QVector<QPair<QRect, QString>>>();
 }
 
 Client::~Client()
@@ -86,7 +85,8 @@ void Client::sendCommand(Client::Command cmd, const QVariant &ctx)
     QJsonObject obj;
 
     obj["command"] = static_cast<int>(cmd);
-    obj["context"] = QJsonValue::fromVariant(ctx);
+    if (ctx.isValid())
+        obj["context"] = QJsonValue::fromVariant(ctx);
 
     QJsonDocument jDoc(obj);
 
@@ -123,6 +123,9 @@ void Client::processTextMessage(const QString& string)
             QString _name = context.toString();
             if (_name == name)
                 break;
+
+            if (_name == "")
+                _name = "noname";
 
 //            if(cHandler->isClientPresent(_name))
 //            {
