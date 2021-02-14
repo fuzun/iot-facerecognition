@@ -166,6 +166,13 @@ void Client::processTextMessage(const QString& string)
             break;
         }
 
+        case (unsigned int)Command::SETTING_DETERMINISTICOBJECTDETECTION:
+        {
+            settings.deterministicObjectDetection = context.toBool();
+
+            sendCommand(Command::SETTING_DETERMINISTICOBJECTDETECTION, settings.deterministicObjectDetection.load());
+            break;
+        }
         // implement later ...
     }
 }

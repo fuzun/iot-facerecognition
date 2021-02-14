@@ -122,35 +122,46 @@ std::vector<Face> DLIBWorker::findFaces(const QString& fileName)
     return findFaces(img);
 }
 
-rectangle DLIBWorker::make_random_cropping_rect_resnet(const dlib::matrix<rgb_pixel> &img, dlib::rand &rnd)
+rectangle DLIBWorker::make_cropping_rect_resnet(const dlib::matrix<rgb_pixel> &img, dlib::rand* rnd)
 {
     double mins = 0.466666666, maxs = 0.875;
-    auto scale = mins + rnd.get_random_double()*(maxs-mins);
-    auto size = scale*std::min(img.nr(), img.nc());
+    auto scale = mins + (rnd ? rnd->get_random_double() : 0.5) * (maxs - mins);
+    auto size = scale * std::min(img.nr(), img.nc());
     rectangle rect(size, size);
 
-    point offset(rnd.get_random_32bit_number()%(img.nc()-rect.width()),
-                 rnd.get_random_32bit_number()%(img.nr()-rect.height()));
+    auto x = img.nc() - rect.width();
+    auto y = img.nr() - rect.height();
+
+    if (rnd)
+    {
+        x = rnd->get_random_32bit_number() % x;
+        y = rnd->get_random_32bit_number() % y;
+    }
+
+    point offset(x, y);
     return move_rect(rect, offset);
 }
 
-void DLIBWorker::randomly_crop_images(const dlib::matrix<rgb_pixel> &img, dlib::array<dlib::matrix<rgb_pixel> > &crops, dlib::rand &rnd, long num_crops)
+void DLIBWorker::crop_images(const dlib::matrix<rgb_pixel> &img, dlib::array<dlib::matrix<rgb_pixel> > &crops, dlib::rand* rnd, long num_crops)
 {
     std::vector<chip_details> dets;
     for (long i = 0; i < num_crops; ++i)
     {
-        auto rect = make_random_cropping_rect_resnet(img, rnd);
-        dets.push_back(chip_details(rect, chip_dims(227,227)));
+        auto rect = make_cropping_rect_resnet(img, rnd);
+        dets.push_back(chip_details(rect, chip_dims(227, 227)));
     }
 
     extract_image_chips(img, dets, crops);
 
-    for (auto&& img : crops)
+    if (rnd)
     {
-        if (rnd.get_random_double() > 0.5)
-            img = fliplr(img);
+        for (auto&& img : crops)
+        {
+            if (rnd->get_random_double() > 0.5)
+                img = fliplr(img);
 
-        apply_random_color_offset(img, rnd);
+            apply_random_color_offset(img, *rnd);
+        }
     }
 }
 
@@ -267,7 +278,10 @@ void DLIBWorker::process(const QByteArray& buffer)
             dlib::array<matrix<rgb_pixel>> images;
             matrix<rgb_pixel> imgMat = mat(img);
 
-            randomly_crop_images(imgMat, images, rnd, m_numCrops);
+            if (m_settings->deterministicObjectDetection)
+                crop_images(imgMat, images, nullptr, m_numCrops);
+            else
+                crop_images(imgMat, images, &rnd, m_numCrops);
 
             matrix<float,1,1000> p = sum_rows(mat(snet(images.begin(), images.end()))) / m_numCrops;
 

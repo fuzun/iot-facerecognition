@@ -131,9 +131,9 @@ public:
     std::vector<Face> findFaces(const dlib::array2d<dlib::rgb_pixel>& img);
     std::vector<Face> findFaces(const QString& fileName);
 
-    // util functions taken as is from dnn_imagenet_ex.cpp:
-    static dlib::rectangle make_random_cropping_rect_resnet(const dlib::matrix<dlib::rgb_pixel>& img, dlib::rand& rnd);
-    static void randomly_crop_images(const dlib::matrix<dlib::rgb_pixel>& img, dlib::array<dlib::matrix<dlib::rgb_pixel>>& crops, dlib::rand& rnd, long num_crops);
+    // util functions taken from dnn_imagenet_ex.cpp:
+    static dlib::rectangle make_cropping_rect_resnet(const dlib::matrix<dlib::rgb_pixel>& img, dlib::rand* rnd);
+    static void crop_images(const dlib::matrix<dlib::rgb_pixel>& img, dlib::array<dlib::matrix<dlib::rgb_pixel>>& crops, dlib::rand* rnd, long num_crops);
 
 public:
 signals:
