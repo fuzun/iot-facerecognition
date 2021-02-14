@@ -297,31 +297,35 @@ void DLIBWorker::process(const QByteArray& buffer)
             emit doneObject(result);
         }
 
-        auto faces = findFaces(img);
-
-        rectangle rect;
-        for (const auto& face : referenceFaces)
+        if (m_settings->faceRecognitionEnabled)
         {
-            faces.push_back(make_tuple(get<0>(face), rect, get<2>(face)));
-        }
+            auto faces = findFaces(img);
 
-        auto graph = createGraph(faces, m_threshold);
-
-        auto clusters = cluster(graph, faces);
-
-        QVector<QPair<QRect, QString>> linearFaces;
-
-        for (const auto& it : clusters)
-        {
-            QString str = it.first;
-            for (const auto& it2 : it.second)
+            rectangle rect;
+            for (const auto& face : referenceFaces)
             {
-                linearFaces.push_back(qMakePair(QRect(it2.left(), it2.top(), it2.width(), it2.height()), str));
+                faces.push_back(make_tuple(get<0>(face), rect, get<2>(face)));
             }
+
+            auto graph = createGraph(faces, m_threshold);
+
+            auto clusters = cluster(graph, faces);
+
+            QVector<QPair<QRect, QString>> linearFaces;
+
+            for (const auto& it : clusters)
+            {
+                QString str = it.first;
+                for (const auto& it2 : it.second)
+                {
+                    linearFaces.push_back(qMakePair(QRect(it2.left(), it2.top(), it2.width(), it2.height()), str));
+                }
+            }
+
+            emit doneFace(linearFaces);
         }
 
         m_busy = false;
-        emit doneFace(linearFaces);
     }
     catch(const std::exception& e)
     {

@@ -173,6 +173,14 @@ void Client::processTextMessage(const QString& string)
             sendCommand(Command::SETTING_DETERMINISTICOBJECTDETECTION, settings.deterministicObjectDetection.load());
             break;
         }
+
+        case (unsigned int)Command::SETTING_FACERECOGNITIONENABLED:
+        {
+            settings.faceRecognitionEnabled = context.toBool();
+
+            sendCommand(Command::SETTING_FACERECOGNITIONENABLED, settings.faceRecognitionEnabled.load());
+            break;
+        }
         // implement later ...
     }
 }

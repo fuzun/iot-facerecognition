@@ -28,6 +28,7 @@ struct Settings
     std::atomic<bool> objectDetectionEnabled = true;
     std::atomic<size_t> labelCount = 5;
     std::atomic<bool> deterministicObjectDetection = false;
+    std::atomic<bool> faceRecognitionEnabled = true;
 };
 
 class Client : public QObject
@@ -43,7 +44,8 @@ private:
         MESSAGE_TAG_OBJECT = 4,
         SETTING_OBJDETECTIONENABLED = 5,
         SETTING_LABELCOUNT = 6,
-        SETTING_DETERMINISTICOBJECTDETECTION = 7
+        SETTING_DETERMINISTICOBJECTDETECTION = 7,
+        SETTING_FACERECOGNITIONENABLED = 8
     };
 
     Settings settings;
