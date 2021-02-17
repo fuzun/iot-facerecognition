@@ -56,6 +56,7 @@ void ClientHandler::removeClient(QWebSocket *socket)
     if(client)
     {
         delete client;
+        client = nullptr;
         clients.erase(it);
     }
 }

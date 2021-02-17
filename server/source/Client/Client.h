@@ -31,11 +31,22 @@ struct Settings
     std::atomic<bool> faceRecognitionEnabled = true;
 };
 
+class QWebSocket;
+class QGraphicsPixmapItem;
+class DLIBWorker;
+class QTimer;
+class QListWidgetItem;
+class ClientDialog;
+class QThread;
+class QSettings;
+
 class Client : public QObject
 {
     Q_OBJECT
 
-private:
+    inline static const char * keyCommand = "command";
+    inline static const char * keyContext = "context";
+
     enum class Command : unsigned int
     {
         SETTING_NAME = 1,
@@ -50,27 +61,27 @@ private:
 
     Settings settings;
 
-    class QWebSocket* socket;
+    QWebSocket* socket;
 
     QString name {"?"};
 
-    class QGraphicsPixmapItem* primaryDisplay;
-    class QGraphicsPixmapItem* secondaryDisplay;
-    class QGraphicsPixmapItem* tertiaryDisplay;
+    QGraphicsPixmapItem* primaryDisplay;
+    QGraphicsPixmapItem* secondaryDisplay;
+    QGraphicsPixmapItem* tertiaryDisplay;
 
-    class DLIBWorker *dlibWorker;
+    DLIBWorker *dlibWorker;
 
-    class QTimer* clearSecondaryDisplayTimer;
+    QTimer* clearSecondaryDisplayTimer;
 
-    class QListWidgetItem* listItem = nullptr;
-    class ClientDialog* dialog = nullptr;
+    QListWidgetItem* listItem = nullptr;
+    ClientDialog* dialog = nullptr;
 
-    class QThread* dlibWorkerThread;
+    QThread* dlibWorkerThread;
 
     void sendCommand(Command cmd, const QVariant& ctx = QVariant());
 
 public:
-    explicit Client(QObject *parent, QWebSocket* _socket, class QSettings* config);
+    explicit Client(QObject *parent, QWebSocket* _socket, QSettings* config);
     ~Client();
 
     void sendTextMessage(const QString& string);
@@ -82,8 +93,8 @@ public:
 
     QString getName() const;
 
-    QListWidgetItem* getListWidgetItem();
-    ClientDialog* getDialog();
+    QListWidgetItem* getListWidgetItem() const;
+    ClientDialog* getDialog() const;
 
     void setListWidgetItem(QListWidgetItem* _listItem);
     void setDialog(ClientDialog* _dialog);
@@ -96,13 +107,12 @@ private slots:
     void processDlibWorkerFaceResults(const QVector<QPair<QRect, QString>>& results);
     void processDlibWorkerObjectResults(const QStringList& results);
 
-    void throwException(const QString& str);
+    void throwException(const std::exception &e);
 
 public:
 signals:
     void clientNameChanged(const QString& name);
     void log(const QString& str);
-
     void process(const QByteArray& buffer);
 
 };

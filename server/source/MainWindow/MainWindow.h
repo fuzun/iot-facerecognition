@@ -41,7 +41,6 @@ signals:
 
 private slots:
     void on_quitButton_clicked();
-
     void on_aboutButton_clicked();
 
 private:

@@ -37,6 +37,8 @@ public:
     explicit Server(QObject *parent = nullptr);
     ~Server();
 
+signals:
+    void end();
 };
 
 #endif // SERVER_H

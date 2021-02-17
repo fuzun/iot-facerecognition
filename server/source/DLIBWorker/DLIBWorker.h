@@ -131,7 +131,6 @@ public:
     std::vector<Face> findFaces(const dlib::array2d<dlib::rgb_pixel>& img);
     std::vector<Face> findFaces(const QString& fileName);
 
-    // util functions taken from dnn_imagenet_ex.cpp:
     static dlib::rectangle make_cropping_rect_resnet(const dlib::matrix<dlib::rgb_pixel>& img, dlib::rand* rnd);
     static void crop_images(const dlib::matrix<dlib::rgb_pixel>& img, dlib::array<dlib::matrix<dlib::rgb_pixel>>& crops, dlib::rand* rnd, long num_crops);
 
@@ -140,7 +139,7 @@ signals:
     void doneFace(const QVector<QPair<QRect, QString>>& results);
     void doneObject(const QStringList& results);
 
-    void throwException(const QString& str);
+    void throwException(const std::exception& e);
     void log(const QString& str);
 
 };

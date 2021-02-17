@@ -59,7 +59,7 @@ SocketHandler::SocketHandler(QObject *parent, UIInterface *&_uiInterface, Client
     }
     else
     {
-        throw "QWebSocketServer can not listen!";
+        throw std::exception("QWebSocketServer can not listen!");
     }
 }
 
@@ -80,25 +80,20 @@ void SocketHandler::onNewConnection()
 
 void SocketHandler::onSslErrors(const QList<QSslError>& errors)
 {
-    QString errStr = "SSL Error:";
-    for(const auto &it : errors)
+    if (!m_testMode)
     {
-        errStr += "\n" + it.errorString();
-    }
+        QString errStr = "SSL Error:";
+        for (const auto &it : errors)
+        {
+            errStr += "\n" + it.errorString();
+        }
 
-    if(m_testMode)
-    {
-        uiInterface->log(errStr);
-    }
-    else
-    {
-        throw errStr;
+        throw (std::exception(errStr.toStdString().c_str()));
     }
 }
 
 void SocketHandler::onDisconnect()
 {
-    uiInterface->log("A client is disconnected.");
     QWebSocket *socket = qobject_cast<QWebSocket *>(sender());
     if (socket)
     {

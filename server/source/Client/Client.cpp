@@ -52,16 +52,31 @@ Client::Client(QObject *parent, QWebSocket* _socket, QSettings* config)
     connect(dlibWorker, &DLIBWorker::log, this, &Client::log);
     dlibWorkerThread->start();
 
-    QObject::connect(socket, &QWebSocket::textMessageReceived, this, &Client::processTextMessage);
-    QObject::connect(socket, &QWebSocket::binaryMessageReceived, this, &Client::processBinaryMessage);
+    QObject::connect(socket, &QWebSocket::textMessageReceived, this, &Client::processTextMessage, Qt::QueuedConnection);
+    QObject::connect(socket, &QWebSocket::binaryMessageReceived, this, &Client::processBinaryMessage, Qt::QueuedConnection);
+
+    QObject::connect(socket, QOverload<QAbstractSocket::SocketError>::of(&QWebSocket::error), [this]() {
+        assert(false);
+        log(QString("Socket error: %1").arg(socket->errorString()));
+    });
+
+    QObject::connect(socket, &QWebSocket::sslErrors, [this](const QList<QSslError> &errors) {
+        assert(false);
+        for (const auto& it : errors)
+        {
+            log(QString("Socket SSL Error: %1").arg(it.errorString()));
+        }
+    });
+
+    QObject::connect(socket, &QWebSocket::disconnected, [this]() {
+        log(QString("Disconnected. Close reason: %1").arg(socket->closeReason()));
+    });
 
     clearSecondaryDisplayTimer = new QTimer(this);
     clearSecondaryDisplayTimer->setInterval(1000);
     connect(clearSecondaryDisplayTimer, &QTimer::timeout, [this](){
         secondaryDisplay->setPixmap(QPixmap());
     });
-
-    log("Started processing incoming images. (if any)");
 }
 
 Client::~Client()
@@ -77,26 +92,24 @@ Client::~Client()
     }
 
     socket->flush();
-    socket->close();
 }
 
 void Client::sendCommand(Client::Command cmd, const QVariant &ctx)
 {
     QJsonObject obj;
 
-    obj["command"] = static_cast<int>(cmd);
+    obj[keyCommand] = static_cast<int>(cmd);
     if (ctx.isValid())
-        obj["context"] = QJsonValue::fromVariant(ctx);
+        obj[keyContext] = QJsonValue::fromVariant(ctx);
 
     QJsonDocument jDoc(obj);
 
     sendTextMessage(QString(jDoc.toJson(QJsonDocument::JsonFormat::Compact)));
 }
 
-void Client::throwException(const QString& str)
+void Client::throwException(const std::exception& e)
 {
-    std::cout << "FATAL ERROR: " << str.toStdString() << std::endl;
-    throw str;
+    throw e;
 }
 
 void Client::processTextMessage(const QString& string)
@@ -106,18 +119,17 @@ void Client::processTextMessage(const QString& string)
     if (jDoc.isNull() || jDoc.isEmpty() || !jDoc.isObject())
         return;
 
-    const unsigned int command = (unsigned)(jDoc["command"].toInt(-1));
+    const unsigned int command = (unsigned)(jDoc[keyCommand].toInt(-1));
 
-    QJsonValue ctxVal = jDoc["context"];
+    QJsonValue ctxVal = jDoc[keyContext];
     QVariant context;
 
     if (ctxVal != QJsonValue::Undefined)
         context = ctxVal.toVariant();
 
-    switch(command)
+    switch( static_cast<Command>(command) )
     {
-        // Client wants to change its name:
-        case (unsigned int)Command::SETTING_NAME:
+        case Command::SETTING_NAME:
         {
 //            ClientHandler* cHandler = qobject_cast<ClientHandler *>(parent());
             QString _name = context.toString();
@@ -143,14 +155,13 @@ void Client::processTextMessage(const QString& string)
             break;
         }
 
-        // Client wants to send a message:
-        case (unsigned int)Command::MESSAGE:
+        case Command::MESSAGE:
         {
             emit log(" says: " + context.toString());
             break;
         }
 
-        case (unsigned int)Command::SETTING_LABELCOUNT:
+        case Command::SETTING_LABELCOUNT:
         {
             settings.labelCount = context.toULongLong();
 
@@ -158,15 +169,15 @@ void Client::processTextMessage(const QString& string)
             break;
         }
 
-        case (unsigned int)Command::SETTING_OBJDETECTIONENABLED:
+        case Command::SETTING_OBJDETECTIONENABLED:
         {
             settings.objectDetectionEnabled = context.toBool();
 
-            sendCommand(Command::SETTING_LABELCOUNT, settings.objectDetectionEnabled.load());
+            sendCommand(Command::SETTING_OBJDETECTIONENABLED, settings.objectDetectionEnabled.load());
             break;
         }
 
-        case (unsigned int)Command::SETTING_DETERMINISTICOBJECTDETECTION:
+        case Command::SETTING_DETERMINISTICOBJECTDETECTION:
         {
             settings.deterministicObjectDetection = context.toBool();
 
@@ -174,11 +185,17 @@ void Client::processTextMessage(const QString& string)
             break;
         }
 
-        case (unsigned int)Command::SETTING_FACERECOGNITIONENABLED:
+        case Command::SETTING_FACERECOGNITIONENABLED:
         {
             settings.faceRecognitionEnabled = context.toBool();
 
             sendCommand(Command::SETTING_FACERECOGNITIONENABLED, settings.faceRecognitionEnabled.load());
+            break;
+        }
+
+        default:
+        {
+            emit log(QString("Received unrecognized command! %1").arg(command));
             break;
         }
         // implement later ...
@@ -212,6 +229,10 @@ void Client::processBinaryMessage(const QByteArray& data)
     {
         // log("Received image frame with size: " + QString::number(data.size()) + " bytes. Processing it...");
         emit process(data);
+    }
+    else
+    {
+        log("Frame dropped!");
     }
 
     if(dialog)
@@ -347,12 +368,12 @@ void Client::sendBinaryMessage(const QByteArray &data)
     socket->sendBinaryMessage(data);
 }
 
-QListWidgetItem* Client::getListWidgetItem()
+QListWidgetItem* Client::getListWidgetItem() const
 {
     return listItem;
 }
 
-ClientDialog* Client::getDialog()
+ClientDialog* Client::getDialog() const
 {
     return dialog;
 }

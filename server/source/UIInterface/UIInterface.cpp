@@ -90,10 +90,7 @@ UIInterface::UIInterface(QObject* parent, MainWindow *&_mainWindow, QSettings* c
 
 UIInterface::~UIInterface()
 {
-    if(fStream)
-    {
-        delete fStream;
-    }
+    delete fStream;
 
     if(logFile->isOpen())
     {
@@ -119,7 +116,7 @@ void UIInterface::logEvent(const QString& string, class Client *client)
     QString message2 = message;
     if(client)
     {
-        message2 += "<i>" + client->getName() + "</i>: ";
+        message2 += "<b><i>" + client->getName() + "</i></b>: ";
     }
     message += string;
     message2 += string;

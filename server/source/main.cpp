@@ -21,8 +21,6 @@
 
 #include <QApplication>
 
-#include "config.h"
-
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
@@ -33,5 +31,9 @@ int main(int argc, char *argv[])
 
     Server server(nullptr);
 
+    QObject::connect(&server, &Server::end, &app, &QApplication::quit, Qt::QueuedConnection);
+    QObject::connect(&app, &QApplication::lastWindowClosed, &app, &QApplication::quit, Qt::QueuedConnection);
+
+    // TODO: Handle SIGTERM to safely terminate the application when it runs in console mode.
     return app.exec();
 }

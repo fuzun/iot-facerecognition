@@ -25,22 +25,25 @@
 
 #include "UIInterface/UIInterface.h"
 
+class QSettings;
+class QWebSocket;
+
 class ClientHandler : public QObject
 {
     Q_OBJECT
 
 private:
-    class QSettings* config;
+    QSettings* config;
     UIInterface*& uiInterface;
 
-    class QHash<class QWebSocket*, class Client *> clients;
+    QHash<class QWebSocket*, class Client *> clients;
 
 public:
     explicit ClientHandler(QObject *parent, UIInterface*& _uiInterface, QSettings* config);
     ~ClientHandler();
 
-    void newClient(class QWebSocket *socket);
-    void removeClient(class QWebSocket *socket);
+    void newClient(QWebSocket *socket);
+    void removeClient(QWebSocket *socket);
     void removeAllClients(void);
 
     bool isClientPresent(const QString& name);

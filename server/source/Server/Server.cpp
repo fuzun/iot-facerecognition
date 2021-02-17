@@ -41,12 +41,7 @@ Server::Server(QObject *parent)
     if(guiEnabled)
     {
         mainWindow = new MainWindow(nullptr);
-        connect(mainWindow, &MainWindow::end, []()
-            {
-                QApplication::processEvents();
-                QApplication::quit();
-
-            });
+        connect(mainWindow, &MainWindow::end, this, &Server::end, Qt::QueuedConnection);
         mainWindow->show();
     }
     else

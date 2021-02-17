@@ -59,7 +59,7 @@ DLIBWorker::DLIBWorker(class QSettings* config, Settings *settings)
     QFile refFile(_refFile);
     if(!refFile.open(QIODevice::ReadOnly))
     {
-        throw "Reference photo list file can not be opened!";
+        throw std::exception("Reference photo list file can not be opened!");
     }
     else
     {
@@ -251,7 +251,7 @@ void DLIBWorker::process(const QByteArray& buffer)
         {
             if(m_refPhotoFileList.size() == 0)
             {
-                throwException("Reference face list is empty!");
+                throwException(std::exception("Reference face list is empty!"));
             }
             else
             {
@@ -329,7 +329,7 @@ void DLIBWorker::process(const QByteArray& buffer)
     }
     catch(const std::exception& e)
     {
-        emit throwException(e.what());
+        emit throwException(e);
     }
 }
 
