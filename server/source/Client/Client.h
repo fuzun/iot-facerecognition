@@ -22,6 +22,7 @@
 
 #include <QObject>
 #include <QVariant>
+#include <QThread>
 
 struct Settings
 {
@@ -33,17 +34,36 @@ struct Settings
 
 class QWebSocket;
 class QGraphicsPixmapItem;
-class DLIBWorker;
 class QTimer;
 class QListWidgetItem;
 class ClientDialog;
 class QThread;
 class QSettings;
+class ClientWorker;
 
 class Client : public QObject
 {
     Q_OBJECT
 
+    Settings settings;
+
+    QWebSocket* socket;
+
+    QString name {"?"};
+
+    QGraphicsPixmapItem* primaryDisplay;
+    QGraphicsPixmapItem* secondaryDisplay;
+    QGraphicsPixmapItem* tertiaryDisplay;
+
+    QTimer* clearSecondaryDisplayTimer;
+
+    QListWidgetItem* listItem = nullptr;
+    ClientDialog* dialog = nullptr;
+
+    QThread workerThread;
+    ClientWorker *worker = nullptr;
+
+public:
     inline static const char * keyCommand = "command";
     inline static const char * keyContext = "context";
 
@@ -59,33 +79,8 @@ class Client : public QObject
         SETTING_FACERECOGNITIONENABLED = 8
     };
 
-    Settings settings;
-
-    QWebSocket* socket;
-
-    QString name {"?"};
-
-    QGraphicsPixmapItem* primaryDisplay;
-    QGraphicsPixmapItem* secondaryDisplay;
-    QGraphicsPixmapItem* tertiaryDisplay;
-
-    DLIBWorker *dlibWorker;
-
-    QTimer* clearSecondaryDisplayTimer;
-
-    QListWidgetItem* listItem = nullptr;
-    ClientDialog* dialog = nullptr;
-
-    QThread* dlibWorkerThread;
-
-    void sendCommand(Command cmd, const QVariant& ctx = QVariant());
-
-public:
     explicit Client(QObject *parent, QWebSocket* _socket, QSettings* config);
     ~Client();
-
-    void sendTextMessage(const QString& string);
-    void sendBinaryMessage(const QByteArray& data);
 
     void setPrimaryDisplayItem(QGraphicsPixmapItem* item);
     void setSecondaryDisplayItem(QGraphicsPixmapItem* item);
@@ -99,9 +94,15 @@ public:
     void setListWidgetItem(QListWidgetItem* _listItem);
     void setDialog(ClientDialog* _dialog);
 
+private:
+    qint64 sendTextMessage(const QString& ctx);
+    qint64 sendBinaryMessage(const QByteArray& ctx);
+
 public slots:
-    void processTextMessage(const QString& string);
+    void processCommand(Client::Command cmd, const QVariant& ctx);
     void processBinaryMessage(const QByteArray& data);
+
+    void sendCommand(Command cmd, const QVariant& ctx = QVariant());
 
 private slots:
     void processDlibWorkerFaceResults(const QVector<QPair<QRect, QString>>& results);
@@ -113,8 +114,8 @@ public:
 signals:
     void clientNameChanged(const QString& name);
     void log(const QString& str);
-    void process(const QByteArray& buffer);
-
 };
+
+Q_DECLARE_METATYPE(Client::Command);
 
 #endif // CLIENT_H

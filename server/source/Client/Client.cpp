@@ -31,36 +31,45 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 
+#include "Client/ClientWorker.h"
 #include "DLIBWorker/DLIBWorker.h"
 #include "ClientDialog/ClientDialog.h"
 #include "ClientHandler/ClientHandler.h"
 
 Client::Client(QObject *parent, QWebSocket* _socket, QSettings* config)
-    : QObject(parent)
-    , socket(_socket)
+    : QObject(parent),
+    socket(_socket)
 {
     qRegisterMetaType<QVector<QPair<QRect, QString>>>();
+    qRegisterMetaType<Client::Command>();
 
-    dlibWorkerThread = new QThread(this);
-    dlibWorker = new DLIBWorker(config, &settings);
-    dlibWorker->moveToThread(dlibWorkerThread);
-    connect(dlibWorker, &DLIBWorker::throwException, this, &Client::throwException);
-    connect(dlibWorkerThread, &QThread::finished, dlibWorker, &QObject::deleteLater);
-    connect(this, &Client::process, dlibWorker, &DLIBWorker::process);
-    connect(dlibWorker, &DLIBWorker::doneFace, this, &Client::processDlibWorkerFaceResults);
-    connect(dlibWorker, &DLIBWorker::doneObject, this, &Client::processDlibWorkerObjectResults);
-    connect(dlibWorker, &DLIBWorker::log, this, &Client::log);
-    dlibWorkerThread->start();
+    worker = new ClientWorker(nullptr, config, &settings);
+    worker->moveToThread(&workerThread);
 
-    QObject::connect(socket, &QWebSocket::textMessageReceived, this, &Client::processTextMessage, Qt::QueuedConnection);
-    QObject::connect(socket, &QWebSocket::binaryMessageReceived, this, &Client::processBinaryMessage, Qt::QueuedConnection);
+    QObject::connect(&workerThread, &QThread::finished, worker, &QObject::deleteLater);
+    workerThread.start();
 
-    QObject::connect(socket, QOverload<QAbstractSocket::SocketError>::of(&QWebSocket::error), [this]() {
+    QMetaObject::invokeMethod(worker, &ClientWorker::init, Qt::BlockingQueuedConnection);
+
+    QObject::connect(worker, &ClientWorker::log, this, &Client::log);
+    QObject::connect(worker, &ClientWorker::throwException, this, &Client::throwException);
+    QObject::connect(worker, &ClientWorker::commandReceived, this, &Client::processCommand);
+    QObject::connect(worker, &ClientWorker::sendCommand, this, &Client::sendCommand);
+
+    QObject::connect(worker->getDlibWorker(), &DLIBWorker::doneFace, this, &Client::processDlibWorkerFaceResults);
+    QObject::connect(worker->getDlibWorker(), &DLIBWorker::doneObject, this, &Client::processDlibWorkerObjectResults);
+
+    QObject::connect(socket, &QWebSocket::binaryMessageReceived, this, &Client::processBinaryMessage);
+
+    QObject::connect(socket, &QWebSocket::textMessageReceived, worker, &ClientWorker::processTextMessage);
+    QObject::connect(socket, &QWebSocket::binaryMessageReceived, worker, &ClientWorker::processBinaryMessage);
+
+    QObject::connect(socket, QOverload<QAbstractSocket::SocketError>::of(&QWebSocket::error), this, [this]() {
         assert(false);
         log(QString("Socket error: %1").arg(socket->errorString()));
     });
 
-    QObject::connect(socket, &QWebSocket::sslErrors, [this](const QList<QSslError> &errors) {
+    QObject::connect(socket, &QWebSocket::sslErrors, this, [this](const QList<QSslError> &errors) {
         assert(false);
         for (const auto& it : errors)
         {
@@ -68,7 +77,7 @@ Client::Client(QObject *parent, QWebSocket* _socket, QSettings* config)
         }
     });
 
-    QObject::connect(socket, &QWebSocket::disconnected, [this]() {
+    QObject::connect(socket, &QWebSocket::disconnected, this, [this]() {
         log(QString("Disconnected. Close reason: %1").arg(socket->closeReason()));
     });
 
@@ -81,125 +90,15 @@ Client::Client(QObject *parent, QWebSocket* _socket, QSettings* config)
 
 Client::~Client()
 {
-    log("Stopping processing...");
-
-    dlibWorkerThread->quit();
-
-    // TODO fix this later
-    while(!dlibWorkerThread->wait(0))
-    {
-        QApplication::processEvents();
-    }
+    workerThread.quit();
+    workerThread.wait();
 
     socket->flush();
-}
-
-void Client::sendCommand(Client::Command cmd, const QVariant &ctx)
-{
-    QJsonObject obj;
-
-    obj[keyCommand] = static_cast<int>(cmd);
-    if (ctx.isValid())
-        obj[keyContext] = QJsonValue::fromVariant(ctx);
-
-    QJsonDocument jDoc(obj);
-
-    sendTextMessage(QString(jDoc.toJson(QJsonDocument::JsonFormat::Compact)));
 }
 
 void Client::throwException(const std::exception& e)
 {
     throw e;
-}
-
-void Client::processTextMessage(const QString& string)
-{
-    QJsonDocument jDoc = QJsonDocument::fromJson(string.toUtf8());
-
-    if (jDoc.isNull() || jDoc.isEmpty() || !jDoc.isObject())
-        return;
-
-    const unsigned int command = (unsigned)(jDoc[keyCommand].toInt(-1));
-
-    QJsonValue ctxVal = jDoc[keyContext];
-    QVariant context;
-
-    if (ctxVal != QJsonValue::Undefined)
-        context = ctxVal.toVariant();
-
-    switch( static_cast<Command>(command) )
-    {
-        case Command::SETTING_NAME:
-        {
-//            ClientHandler* cHandler = qobject_cast<ClientHandler *>(parent());
-            QString _name = context.toString();
-            if (_name == name)
-                break;
-
-            if (_name == "")
-                _name = "noname";
-
-//            if(cHandler->isClientPresent(_name))
-//            {
-//                _name.append("(1)");
-//            }
-
-//            if(name == "?")
-//            {
-//                log("Client has connected!");
-//            }
-            name = _name;
-            emit clientNameChanged(name);
-
-            sendCommand(Command::SETTING_NAME, name);
-            break;
-        }
-
-        case Command::MESSAGE:
-        {
-            emit log(" says: " + context.toString());
-            break;
-        }
-
-        case Command::SETTING_LABELCOUNT:
-        {
-            settings.labelCount = context.toULongLong();
-
-            sendCommand(Command::SETTING_LABELCOUNT, settings.labelCount.load());
-            break;
-        }
-
-        case Command::SETTING_OBJDETECTIONENABLED:
-        {
-            settings.objectDetectionEnabled = context.toBool();
-
-            sendCommand(Command::SETTING_OBJDETECTIONENABLED, settings.objectDetectionEnabled.load());
-            break;
-        }
-
-        case Command::SETTING_DETERMINISTICOBJECTDETECTION:
-        {
-            settings.deterministicObjectDetection = context.toBool();
-
-            sendCommand(Command::SETTING_DETERMINISTICOBJECTDETECTION, settings.deterministicObjectDetection.load());
-            break;
-        }
-
-        case Command::SETTING_FACERECOGNITIONENABLED:
-        {
-            settings.faceRecognitionEnabled = context.toBool();
-
-            sendCommand(Command::SETTING_FACERECOGNITIONENABLED, settings.faceRecognitionEnabled.load());
-            break;
-        }
-
-        default:
-        {
-            emit log(QString("Received unrecognized command! %1").arg(command));
-            break;
-        }
-        // implement later ...
-    }
 }
 
 QString Client::getName() const
@@ -224,17 +123,6 @@ void Client::setTertiaryDisplayItem(QGraphicsPixmapItem *item)
 
 void Client::processBinaryMessage(const QByteArray& data)
 {
-    // log("Received image frame with size: " + QString::number(data.size()) + " bytes.");
-    if(!dlibWorker->isBusy())
-    {
-        // log("Received image frame with size: " + QString::number(data.size()) + " bytes. Processing it...");
-        emit process(data);
-    }
-    else
-    {
-        log("Frame dropped!");
-    }
-
     if(dialog)
     {
         dlib::array2d<dlib::rgb_pixel> img(DLIBWorker::constructImgFromBuffer(data));
@@ -244,41 +132,24 @@ void Client::processBinaryMessage(const QByteArray& data)
     }
 }
 
+void Client::sendCommand(Client::Command cmd, const QVariant &ctx)
+{
+    QJsonObject obj;
+
+    obj[keyCommand] = static_cast<int>(cmd);
+    if (ctx.isValid())
+        obj[keyContext] = QJsonValue::fromVariant(ctx);
+
+    QJsonDocument jDoc(obj);
+
+    sendTextMessage(QString(jDoc.toJson(QJsonDocument::JsonFormat::Compact)));
+}
+
 void Client::processDlibWorkerFaceResults(const QVector<QPair<QRect, QString>>& results)
 {
     // log("DLIB could not find any face in the given image frame!"); // this bloats the log
     if(results.size() > 0)
     {
-        log("DLIB has found faces with following properties:");
-
-        // send dlib output to client
-        QVariantList ctx;
-        for(const auto &it : results)
-        {
-            QVariantHash i;
-            int x = it.first.x();
-            int y = it.first.y();
-            int width = it.first.width();
-            int height = it.first.height();
-            QString tag = it.second;
-
-            i["x"] = x;
-            i["y"] = y;
-            i["width"] = width;
-            i["height"] = height;
-            i["tag"] = tag;
-
-            ctx.push_back(i);
-            log(QString("Tag: \"%0\" - X: %1, Y: %2, W: %3, H: %4")
-                    .arg(tag)
-                    .arg(x)
-                    .arg(y)
-                    .arg(width)
-                    .arg(height));
-        }
-        log("Sending found face properties to the client.");
-        sendCommand(Command::MESSAGE_TAG_FACE, ctx);
-
         if(dialog)
         {
             // process dlib output on dialog window
@@ -321,10 +192,6 @@ void Client::processDlibWorkerObjectResults(const QStringList &results)
     if (results.isEmpty())
         return;
 
-    log("DLIB has found objects: " + results.join(", "));
-    log("Sending found object properties to the client.");
-    sendCommand(Command::MESSAGE_TAG_OBJECT, results);
-
     if (dialog)
     {
         QPixmap pixmap(primaryDisplay->pixmap().width(), primaryDisplay->pixmap().height());
@@ -358,16 +225,6 @@ void Client::processDlibWorkerObjectResults(const QStringList &results)
     }
 }
 
-void Client::sendTextMessage(const QString &string)
-{
-    socket->sendTextMessage(string);
-}
-
-void Client::sendBinaryMessage(const QByteArray &data)
-{
-    socket->sendBinaryMessage(data);
-}
-
 QListWidgetItem* Client::getListWidgetItem() const
 {
     return listItem;
@@ -386,4 +243,61 @@ void Client::setListWidgetItem(QListWidgetItem* _listItem)
 void Client::setDialog(ClientDialog* _dialog)
 {
     dialog = _dialog;
+}
+
+qint64 Client::sendTextMessage(const QString &ctx)
+{
+    if(!socket || !socket->isValid())
+        return -1;
+
+    auto ret = socket->sendTextMessage(ctx);
+    auto pSize = ctx.size();
+
+    if (ret < pSize)
+    {
+        emit log(QString("Text Package loss. WANTED TO SEND / ACTUALLY SENT: %1 / %2").arg(pSize).arg(ret));
+    }
+
+    return ret;
+}
+
+qint64 Client::sendBinaryMessage(const QByteArray &ctx)
+{
+    if(!socket || !socket->isValid())
+        return -1;
+
+    auto ret = socket->sendBinaryMessage(ctx);
+    auto pSize = ctx.size();
+
+    if (ret < pSize)
+    {
+        emit log(QString("Binary Package loss. WANTED TO SEND / ACTUALLY SENT: %1 / %2").arg(pSize).arg(ret));
+    }
+
+    return ret;
+}
+
+void Client::processCommand(ClientWorker::Command cmd, const QVariant &ctx)
+{
+    switch(cmd)
+    {
+        case Command::SETTING_NAME:
+        {
+            QString _name = ctx.toString();
+            if (_name == name)
+                break;
+
+            if (_name == "")
+                _name = "noname";
+
+            name = _name;
+            emit clientNameChanged(name);
+
+            sendCommand(Command::SETTING_NAME, name);
+            break;
+        }
+
+        default:
+            break;
+    }
 }

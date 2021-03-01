@@ -18,27 +18,28 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if (MSVC)
-        add_definitions(/bigobj)
-        add_definitions(/FS)
-        add_definitions(/arch:AVX)
+    add_definitions(/bigobj)
+    add_definitions(/FS)
+    add_definitions(/arch:AVX)
 endif (MSVC)
 
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Widgets WebSockets REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Widgets WebSockets REQUIRED)
 
 set(PROJECT_SOURCES
-		source/ClientDialog/ClientDialog.cpp
-		source/ClientHandler/ClientHandler.cpp
-		source/Client/Client.cpp
-		source/DLIBWorker/DLIBWorker.cpp
-		source/UIInterface/UIInterface.cpp
-		source/Server/Server.cpp
-		source/SocketHandler/SocketHandler.cpp
-		source/main.cpp
-		source/MainWindow/MainWindow.cpp
-		
-		source/ClientDialog/ClientDialog.ui
-		source/MainWindow/MainWindow.ui
+                source/Client/ClientWorker.cpp
+                source/ClientDialog/ClientDialog.cpp
+                source/ClientHandler/ClientHandler.cpp
+                source/Client/Client.cpp
+                source/DLIBWorker/DLIBWorker.cpp
+                source/UIInterface/UIInterface.cpp
+                source/Server/Server.cpp
+                source/SocketHandler/SocketHandler.cpp
+                source/main.cpp
+                source/MainWindow/MainWindow.cpp
+
+                source/ClientDialog/ClientDialog.ui
+                source/MainWindow/MainWindow.ui
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)

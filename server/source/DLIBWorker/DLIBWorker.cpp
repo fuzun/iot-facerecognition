@@ -41,7 +41,7 @@ using namespace std;
 
 using Face = DLIBWorker::Face;
 
-DLIBWorker::DLIBWorker(class QSettings* config, Settings *settings)
+DLIBWorker::DLIBWorker(class QSettings* config, const Settings *settings)
     : m_busy(false), m_settings(settings)
 {  
     config->beginGroup(CONFIG_DLIB);

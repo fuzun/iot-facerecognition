@@ -108,7 +108,7 @@ private:
     QString                          m_imageNetClassifierFile;
     size_t                           m_numCrops;
 
-    struct Settings* m_settings;
+    const struct Settings* m_settings;
 
     std::vector<Face> referenceFaces;
 
@@ -122,7 +122,7 @@ public slots:
     void process(const QByteArray& buffer);
 
 public:
-    explicit DLIBWorker(class QSettings* config, struct Settings* settings);
+    explicit DLIBWorker(class QSettings* config, const struct Settings* settings);
 
     static dlib::array2d<dlib::rgb_pixel> constructImgFromBuffer(const QByteArray& buffer);
 
