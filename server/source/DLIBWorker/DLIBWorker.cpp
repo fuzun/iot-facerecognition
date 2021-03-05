@@ -23,6 +23,9 @@
 #include <QPixmap>
 #include <QSettings>
 #include <QFile>
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <QJsonObject>
 #include <vector>
 
 #include <Client/Client.h>
@@ -63,21 +66,31 @@ DLIBWorker::DLIBWorker(class QSettings* config, const Settings *settings)
     }
     else
     {
-        while(!refFile.atEnd())
+        QByteArray data = refFile.readAll();
+
+        QJsonDocument doc(QJsonDocument::fromJson(data));
+
+        for (auto&& i : doc.array())
         {
-            QString line = refFile.readLine();
-            QStringList lineSplit = line.split(":");
-            if (!lineSplit[1].contains(","))
+            if (!i.isObject())
+                continue;
+
+            QJsonObject obj = i.toObject();
+
+            QString tag = obj.value("tag").toString();
+
+            auto&& k = obj.value("photos");
+
+            if (k.isArray())
             {
-                m_refPhotoFileList.push_back(qMakePair(lineSplit[0].trimmed(), lineSplit[1].trimmed()));
-            }
-            else
-            {
-                QStringList lineSplit2 = lineSplit[1].split(",");
-                for (const auto& it : lineSplit2)
+                for (auto&& j : k.toArray())
                 {
-                    m_refPhotoFileList.push_back(qMakePair(lineSplit[0].trimmed(), it.trimmed()));
+                    m_refPhotoFileList.push_back(qMakePair(tag, j.toString()));
                 }
+            }
+            else if (k.isString())
+            {
+                m_refPhotoFileList.push_back(qMakePair(tag, k.toString()));
             }
         }
     }
