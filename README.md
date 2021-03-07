@@ -1,8 +1,10 @@
+# NOTE:
+
+<p>This project is currently in maintenance mode and it is not suggested to use except for debug purposes. The README is somewhat obsolote and subject to change. The biggest change will be a brand new client made with Qt Framework. The new client will come with a fluid UI made with QML and it will use OpenMAX to grasp camera images to be able to run with high performance in embedded devices such as Raspberry Pi Zero W.</p>
 
 # iot-facerecognition
 <p>iot-facerecognition is a project that was created to provide real-time face detection ability to iot devices such as Raspberry Pi that are not normally able to recognize faces due to low computing power. The logic behind is to offload the work required of recognizing faces to a capable back-end solution in a simple way. Websocket is used for data transmission for versatility. SSL is forced enable to secure the connection.</p>
 
-![Schematic 1](https://raw.githubusercontent.com/fuzun/iot-facerecognition/master/schematic1.png)
 <p>iot-facerecognition consists of two parts: server and client. Server, or the backend, is responsible for parsing the data that the connected clients send concurrently. It uses DLIB and OpenCV to perform face detection and recognition. Resources are allocated to the clients evenly.  It does the face recognition for each client in parallel. It is fast and it is designed to handle many amount of clients. It is written in modern C++.</p>
 
 ![Schematic 2](https://raw.githubusercontent.com/fuzun/iot-facerecognition/master/schematic2.png)<p>The client captures image sequence (30~ FPS) and streams it to the server, continuously. After the server resolves the faces contained in a certain video frame it sends data regarding the faces (Geometry and tag) to the client and according to the client configuration, client shows rectangle around faces along with their tags.</p>
