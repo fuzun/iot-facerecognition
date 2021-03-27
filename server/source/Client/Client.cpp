@@ -52,7 +52,6 @@ Client::Client(QObject *parent, QWebSocket* _socket, QSettings* config)
     QMetaObject::invokeMethod(worker, &ClientWorker::init, Qt::BlockingQueuedConnection);
 
     QObject::connect(worker, &ClientWorker::log, this, &Client::log);
-    QObject::connect(worker, &ClientWorker::throwException, this, &Client::throwException);
     QObject::connect(worker, &ClientWorker::commandReceived, this, &Client::processCommand);
     QObject::connect(worker, &ClientWorker::sendCommand, this, &Client::sendCommand);
 
@@ -94,11 +93,6 @@ Client::~Client()
     workerThread.wait();
 
     socket->flush();
-}
-
-void Client::throwException(const std::exception& e)
-{
-    throw e;
 }
 
 QString Client::getName() const

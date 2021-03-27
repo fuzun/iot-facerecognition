@@ -108,8 +108,6 @@ private slots:
     void processDlibWorkerFaceResults(const QVector<QPair<QRect, QString>>& results);
     void processDlibWorkerObjectResults(const QStringList& results);
 
-    void throwException(const std::exception &e);
-
 public:
 signals:
     void clientNameChanged(const QString& name);

@@ -76,7 +76,6 @@ public slots:
 
 signals:
     void log(const QString& str);
-    void throwException(const std::exception &e);
     void commandReceived(Client::Command cmd, const QVariant& ctx);
 
 };

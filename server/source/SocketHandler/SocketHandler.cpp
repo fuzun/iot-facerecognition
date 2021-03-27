@@ -10,6 +10,8 @@
 #include <QWebSocket>
 #include <QSettings>
 
+#include <stdexcept>
+
 #include "Server/Server.h"
 #include "ClientHandler/ClientHandler.h"
 #include "UIInterface/UIInterface.h"
@@ -59,7 +61,7 @@ SocketHandler::SocketHandler(QObject *parent, UIInterface *&_uiInterface, Client
     }
     else
     {
-        throw std::exception("QWebSocketServer can not listen!");
+        throw std::runtime_error("QWebSocketServer can not listen!");
     }
 }
 
@@ -88,7 +90,7 @@ void SocketHandler::onSslErrors(const QList<QSslError>& errors)
             errStr += "\n" + it.errorString();
         }
 
-        throw (std::exception(errStr.toStdString().c_str()));
+        throw std::runtime_error(errStr.toStdString().c_str());
     }
 }
 

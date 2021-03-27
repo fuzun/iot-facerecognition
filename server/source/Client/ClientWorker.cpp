@@ -169,7 +169,6 @@ void ClientWorker::init()
 
     dlibWorker = new DLIBWorker(config, settings);
     dlibWorker->moveToThread(&dlibWorkerThread);
-    connect(dlibWorker, &DLIBWorker::throwException, this, &ClientWorker::throwException);
     connect(&dlibWorkerThread, &QThread::finished, dlibWorker, &QObject::deleteLater);
     connect(this, &ClientWorker::processImage, dlibWorker, &DLIBWorker::process);
     connect(dlibWorker, &DLIBWorker::doneFace, this, &ClientWorker::processDlibWorkerFaceResults);

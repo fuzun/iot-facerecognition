@@ -60,11 +60,7 @@ DLIBWorker::DLIBWorker(class QSettings* config, const Settings *settings)
     config->endGroup();
 
     QFile refFile(_refFile);
-    if(!refFile.open(QIODevice::ReadOnly))
-    {
-        throw std::exception("Reference photo list file can not be opened!");
-    }
-    else
+    if(refFile.open(QIODevice::ReadOnly))
     {
         QByteArray data = refFile.readAll();
 
@@ -97,9 +93,17 @@ DLIBWorker::DLIBWorker(class QSettings* config, const Settings *settings)
 
 #ifdef TURBOJPEG_AVAILABLE
     QMetaObject::invokeMethod(this, [this]() {
-            m_tjHandle = tjInitDecompress();
-        }, Qt::QueuedConnection);
+        m_tjHandle = tjInitDecompress();
+    }, Qt::QueuedConnection);
 #endif
+
+    QMetaObject::invokeMethod(this, [this]() {
+        detector = get_frontal_face_detector();
+        string landmarkModel = m_faceLandmarkModelFile.toStdString();
+        string recogModel = m_faceRecognitionModelFile.toStdString();
+        deserialize(landmarkModel) >> sp;
+        deserialize(recogModel) >> net;
+    }, Qt::QueuedConnection);
 }
 
 DLIBWorker::~DLIBWorker()
@@ -402,16 +406,10 @@ void DLIBWorker::process(const QByteArray& buffer)
             {
                 if(m_refPhotoFileList.size() == 0)
                 {
-                    throwException(std::exception("Reference face list is empty!"));
+                    emit log("WARNING: Reference face list is empty!");
                 }
                 else
                 {
-                    detector = get_frontal_face_detector();
-                    string landmarkModel = m_faceLandmarkModelFile.toStdString();
-                    string recogModel = m_faceRecognitionModelFile.toStdString();
-                    deserialize(landmarkModel) >> sp;
-                    deserialize(recogModel) >> net;
-
                     setupReference(m_refPhotoFileList);
                 }
             }
@@ -449,7 +447,8 @@ void DLIBWorker::process(const QByteArray& buffer)
     }
     catch(const std::exception& e)
     {
-        emit throwException(e);
+        std::cerr << e.what() << std::endl;
+        emit log(QString("dlib exception: %1").arg(e.what()));
     }
 }
 

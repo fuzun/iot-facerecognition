@@ -145,9 +145,7 @@ signals:
     void doneFace(const QVector<QPair<QRect, QString>>& results);
     void doneObject(const QStringList& results);
 
-    void throwException(const std::exception& e);
     void log(const QString& str);
-
 };
 
 #endif // DLIBWORKER_H
