@@ -30,12 +30,12 @@
 
 #include <Client/Client.h>
 
-#ifndef DLIB_JPEG_SUPPORT
-#error "DLIB must have built-in libjpeg support enabled!"
-#endif
-
 #include <dlib/clustering.h>
 #include <dlib/image_io.h>
+
+#ifdef TURBOJPEG_AVAILABLE
+#include <turbojpeg.h>
+#endif
 
 #include "config.h"
 
@@ -94,6 +94,104 @@ DLIBWorker::DLIBWorker(class QSettings* config, const Settings *settings)
             }
         }
     }
+
+#ifdef TURBOJPEG_AVAILABLE
+    QMetaObject::invokeMethod(this, [this]() {
+            m_tjHandle = tjInitDecompress();
+        }, Qt::QueuedConnection);
+#endif
+}
+
+DLIBWorker::~DLIBWorker()
+{
+#ifdef TURBOJPEG_AVAILABLE
+    if (m_tjHandle)
+        tjDestroy(m_tjHandle);
+#endif
+}
+
+dlib::array2d<rgb_pixel> DLIBWorker::decodeJPEG(const QByteArray &jpegBuffer, void *tjHandle)
+{
+    array2d<rgb_pixel> img;
+
+#ifdef TURBOJPEG_AVAILABLE
+    bool destroyHandle = false;
+
+    if (tjHandle == nullptr)
+    {
+        tjHandle = tjInitDecompress();
+        destroyHandle = true;
+    }
+
+    assert(tjHandle);
+
+    int width, height;
+    int jpegSubsamp, jpegColorspace;
+
+    int ret;
+
+    auto ptrBuffer = reinterpret_cast<const unsigned char*>(jpegBuffer.constData());
+
+    ret = tjDecompressHeader3(tjHandle,
+        ptrBuffer,
+        jpegBuffer.size(),
+        &width, &height,
+        &jpegSubsamp, &jpegColorspace);
+
+    if (ret || width <= 0 || height <= 0)
+    {
+        if (destroyHandle)
+            tjDestroy(tjHandle);
+
+        return img;
+    }
+
+    img.set_size(height, width);
+
+    tjDecompress2(tjHandle,
+                  ptrBuffer,
+                  jpegBuffer.size(),
+                  static_cast<unsigned char*>(image_data(img)),
+                  width, 0, height,
+                  TJPF_RGB,
+                  TJFLAG_FASTDCT);
+
+    if (destroyHandle)
+        tjDestroy(tjHandle);
+#else
+    Q_UNUSED(tjHandle);
+
+    try
+    {
+        load_jpeg(img, buffer.constData(), buffer.size());
+    }
+    catch(...)
+    {
+
+    }
+#endif
+
+    return img;
+}
+
+dlib::array2d<rgb_pixel> DLIBWorker::decodeJPEG(const QByteArray &jpegBuffer)
+{
+    auto decoded = decodeJPEG(jpegBuffer,
+#ifdef TURBOJPEG_AVAILABLE
+        m_tjHandle
+#else
+        nullptr
+#endif
+        );
+
+    if (decoded.size() <= 0)
+#ifdef TURBOJPEG_AVAILABLE
+        emit log(QString("libjpeg-turbo error code: %1").arg(tjGetErrorStr2(m_tjHandle)));
+#else
+        emit log("dlib::load_jpeg failed!");
+#endif
+
+    return decoded;
 }
 
 std::vector<Face> DLIBWorker::findFaces(const array2d<rgb_pixel>& img)
@@ -260,25 +358,13 @@ void DLIBWorker::process(const QByteArray& buffer)
 
     try
     {
-        if(referenceFaces.size() == 0)
+        auto img = decodeJPEG(buffer);
+
+        if (img.size() <= 0)
         {
-            if(m_refPhotoFileList.size() == 0)
-            {
-                throwException(std::exception("Reference face list is empty!"));
-            }
-            else
-            {
-                detector = get_frontal_face_detector();
-                string landmarkModel = m_faceLandmarkModelFile.toStdString();
-                string recogModel = m_faceRecognitionModelFile.toStdString();
-                deserialize(landmarkModel) >> sp;
-                deserialize(recogModel) >> net;
-
-                setupReference(m_refPhotoFileList);
-            }
+            m_busy = false;
+            return;
         }
-
-        auto img = constructImgFromBuffer(buffer);
 
         if (m_settings->objectDetectionEnabled)
         {
@@ -312,30 +398,51 @@ void DLIBWorker::process(const QByteArray& buffer)
 
         if (m_settings->faceRecognitionEnabled)
         {
-            auto faces = findFaces(img);
-
-            rectangle rect;
-            for (const auto& face : referenceFaces)
+            if(referenceFaces.size() == 0)
             {
-                faces.push_back(make_tuple(get<0>(face), rect, get<2>(face)));
-            }
-
-            auto graph = createGraph(faces, m_threshold);
-
-            auto clusters = cluster(graph, faces);
-
-            QVector<QPair<QRect, QString>> linearFaces;
-
-            for (const auto& it : clusters)
-            {
-                QString str = it.first;
-                for (const auto& it2 : it.second)
+                if(m_refPhotoFileList.size() == 0)
                 {
-                    linearFaces.push_back(qMakePair(QRect(it2.left(), it2.top(), it2.width(), it2.height()), str));
+                    throwException(std::exception("Reference face list is empty!"));
+                }
+                else
+                {
+                    detector = get_frontal_face_detector();
+                    string landmarkModel = m_faceLandmarkModelFile.toStdString();
+                    string recogModel = m_faceRecognitionModelFile.toStdString();
+                    deserialize(landmarkModel) >> sp;
+                    deserialize(recogModel) >> net;
+
+                    setupReference(m_refPhotoFileList);
                 }
             }
 
-            emit doneFace(linearFaces);
+            auto faces = findFaces(img);
+
+            if (faces.size() > 0)
+            {
+                rectangle rect;
+                for (const auto& face : referenceFaces)
+                {
+                    faces.push_back(make_tuple(get<0>(face), rect, get<2>(face)));
+                }
+
+                auto graph = createGraph(faces, m_threshold);
+
+                auto clusters = cluster(graph, faces);
+
+                QVector<QPair<QRect, QString>> linearFaces;
+
+                for (const auto& it : clusters)
+                {
+                    QString str = it.first;
+                    for (const auto& it2 : it.second)
+                    {
+                        linearFaces.push_back(qMakePair(QRect(it2.left(), it2.top(), it2.width(), it2.height()), str));
+                    }
+                }
+
+                emit doneFace(linearFaces);
+            }
         }
 
         m_busy = false;
@@ -346,9 +453,3 @@ void DLIBWorker::process(const QByteArray& buffer)
     }
 }
 
-dlib::array2d<dlib::rgb_pixel> DLIBWorker::constructImgFromBuffer(const QByteArray& buffer)
-{
-    array2d<rgb_pixel> img;
-    load_jpeg(img, buffer.constData(), buffer.size());
-    return img;
-}

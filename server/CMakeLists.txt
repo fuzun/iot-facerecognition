@@ -17,6 +17,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
+
 if (MSVC)
     add_definitions(/bigobj)
     add_definitions(/FS)
@@ -66,6 +68,22 @@ FetchContent_Declare(dlib
     GIT_TAG        v19.21
 )
 FetchContent_MakeAvailable(dlib)
+
+if (NOT DLIB_JPEG_SUPPORT)
+    message(FATAL_ERROR "dlib's jpeg support must be enabled!")
+endif()
+
+find_package(TurboJPEG)
+if (TurboJPEG_FOUND OR DLIB_JPEG_SUPPORT)
+    target_include_directories(iot-facerecognition-server PRIVATE ${TurboJPEG_INCLUDE_DIRS})
+    target_link_libraries(iot-facerecognition-server PRIVATE ${TurboJPEG_LIBRARIES})
+    target_compile_definitions(iot-facerecognition-server PRIVATE TURBOJPEG_AVAILABLE)
+
+    message(STATUS "libjpeg-turbo is found. It will be used for fast JPEG decoding.")
+elseif (DLIB_JPEG_SUPPORT)
+    message(WARNING "libjpeg-turbo is NOT found. Real-time JPEG decoding may be slow.")
+endif()
+
 
 target_include_directories(iot-facerecognition-server
 	PRIVATE

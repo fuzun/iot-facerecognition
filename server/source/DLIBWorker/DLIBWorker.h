@@ -108,6 +108,10 @@ private:
     QString                          m_imageNetClassifierFile;
     size_t                           m_numCrops;
 
+#ifdef TURBOJPEG_AVAILABLE
+    void* m_tjHandle = nullptr;
+#endif
+
     const struct Settings* m_settings;
 
     std::vector<Face> referenceFaces;
@@ -123,8 +127,10 @@ public slots:
 
 public:
     explicit DLIBWorker(class QSettings* config, const struct Settings* settings);
+    ~DLIBWorker();
 
-    static dlib::array2d<dlib::rgb_pixel> constructImgFromBuffer(const QByteArray& buffer);
+    static dlib::array2d<dlib::rgb_pixel> decodeJPEG(const QByteArray& jpegBuffer, void* tjHandle);
+    dlib::array2d<dlib::rgb_pixel> decodeJPEG(const QByteArray& jpegBuffer);
 
     inline bool isBusy() const { return m_busy; };
 

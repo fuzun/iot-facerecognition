@@ -125,7 +125,10 @@ void Client::processBinaryMessage(const QByteArray& data)
 {
     if(dialog)
     {
-        dlib::array2d<dlib::rgb_pixel> img(DLIBWorker::constructImgFromBuffer(data));
+        dlib::array2d<dlib::rgb_pixel> img(DLIBWorker::decodeJPEG(data, nullptr));
+
+        if (img.size() <= 0)
+            return;
 
         QPixmap pixmap(QPixmap::fromImage(QImage((unsigned char*)dlib::image_data(img), img.nc(), img.nr(), QImage::Format_RGB888)));
         primaryDisplay->setPixmap(pixmap);
