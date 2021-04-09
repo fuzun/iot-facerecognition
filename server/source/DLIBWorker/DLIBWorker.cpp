@@ -388,12 +388,12 @@ void DLIBWorker::process(const QByteArray& buffer)
 
             matrix<float,1,1000> p = sum_rows(mat(snet(images.begin(), images.end()))) / m_numCrops;
 
-            QStringList result;
+            QVector<QPair<float, QString>> result;
 
             for (size_t k = 0; k < m_settings->labelCount; ++k)
             {
                 unsigned long predicted_label = index_of_max(p);
-                result.append(QString::number(p(predicted_label)) + ": " + QString::fromStdString(labels[predicted_label]));
+                result.append( { p(predicted_label), QString::fromStdString(labels[predicted_label]) } );
                 p(predicted_label) = 0;
             }
 

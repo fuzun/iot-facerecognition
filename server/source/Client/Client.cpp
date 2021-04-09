@@ -41,6 +41,8 @@ Client::Client(QObject *parent, QWebSocket* _socket, QSettings* config)
     socket(_socket)
 {
     qRegisterMetaType<QVector<QPair<QRect, QString>>>();
+    qRegisterMetaType<QVector<QPair<float,QString>>>();
+
     qRegisterMetaType<Client::Command>();
 
     worker = new ClientWorker(nullptr, config, &settings);
@@ -184,7 +186,7 @@ void Client::processDlibWorkerFaceResults(const QVector<QPair<QRect, QString>>& 
     }
 }
 
-void Client::processDlibWorkerObjectResults(const QStringList &results)
+void Client::processDlibWorkerObjectResults(const QVector<QPair<float, QString> > &results)
 {
     if (results.isEmpty())
         return;
@@ -206,7 +208,7 @@ void Client::processDlibWorkerObjectResults(const QStringList &results)
             font.setPointSize(12);
             paint.setFont(font);
 
-            const QString& str = it;
+            const QString& str = QString("%1: %2").arg(it.first).arg(it.second);
 
             QFontMetrics fMetrics(paint.font());
             QRect textRect(20, 20 + fMetrics.size(Qt::TextSingleLine, str).height() * counter, fMetrics.size(Qt::TextSingleLine, str).width(), fMetrics.size(Qt::TextSingleLine, str).height());

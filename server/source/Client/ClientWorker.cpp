@@ -80,14 +80,27 @@ void ClientWorker::processDlibWorkerFaceResults(const QVector<QPair<QRect, QStri
     }
 }
 
-void ClientWorker::processDlibWorkerObjectResults(const QStringList &results)
+void ClientWorker::processDlibWorkerObjectResults(const QVector<QPair<float, QString>> &results)
 {
     if (results.isEmpty())
         return;
 
-    log("DLIB has found objects: " + results.join(", "));
+    QStringList strList;
+    QVariantList list;
+    for (const auto& i : results)
+    {
+        QVariantHash hash;
+
+        hash["prediction"] = i.first;
+        hash["label"] = i.second;
+
+        strList.push_back(QString("%1: %2").arg(i.first).arg(i.second));
+        list.push_back(hash);
+    }
+
+    log("DLIB has found objects: " + strList.join(","));
     log("Sending found object properties to the client.");
-    sendCommand(Command::MESSAGE_TAG_OBJECT, results);
+    sendCommand(Command::MESSAGE_TAG_OBJECT, list);
 }
 
 void ClientWorker::processTextMessage(const QString &message)

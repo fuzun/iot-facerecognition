@@ -106,7 +106,7 @@ public slots:
 
 private slots:
     void processDlibWorkerFaceResults(const QVector<QPair<QRect, QString>>& results);
-    void processDlibWorkerObjectResults(const QStringList& results);
+    void processDlibWorkerObjectResults(const QVector<QPair<float, QString>>& results);
 
 public:
 signals:

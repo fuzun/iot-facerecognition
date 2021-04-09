@@ -63,7 +63,7 @@ signals:
 
 private slots:
     void processDlibWorkerFaceResults(const QVector<QPair<QRect, QString>>& results);
-    void processDlibWorkerObjectResults(const QStringList& results);
+    void processDlibWorkerObjectResults(const const QVector<QPair<float, QString>> &results);
 
     void processTextMessage(const QString& message);
     void processBinaryMessage(const QByteArray& data);

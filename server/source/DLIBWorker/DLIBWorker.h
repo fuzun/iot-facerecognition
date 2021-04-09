@@ -143,7 +143,7 @@ public:
 public:
 signals:
     void doneFace(const QVector<QPair<QRect, QString>>& results);
-    void doneObject(const QStringList& results);
+    void doneObject(const QVector<QPair<float, QString>>& results);
 
     void log(const QString& str);
 };
