@@ -16,23 +16,24 @@
 *    You should have received a copy of the GNU General Public License
 *    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-
 #ifndef SOCKETHANDLER_H
 #define SOCKETHANDLER_H
 
 #include <QObject>
 #include <QSslError>
+#include <QThread>
 
-#include "ClientHandler/ClientHandler.h"
-#include "UIInterface/UIInterface.h"
+class QWebSocket;
+class QWebSocketServer;
+class QSettings;
+class Client;
 
 class SocketHandler : public QObject
 {
     Q_OBJECT
 
 private:
-    ClientHandler*& clientHandler;
-    UIInterface*&   uiInterface;
+    QThread socketThread;
 
     unsigned short          m_port;
     QString                 m_serverName;
@@ -42,18 +43,24 @@ private:
     int                     m_encodingFormat;
     bool                    m_testMode;
 
+protected:
+    QSettings *m_config;
+
 public:
-    explicit SocketHandler(QObject *parent, UIInterface*& _uiInterface, ClientHandler*& _clientHandler, class QSettings* config);
+    explicit SocketHandler(QObject *parent, class QSettings* config);
     ~SocketHandler();
 
+signals:
+    void newClient(Client* socket);
+    void log(const QString& message);
+
 protected:
-    class QWebSocketServer* webSocketServer;
+    QWebSocketServer* webSocketServer;
 
 private slots:
     void onNewConnection();
     void onDisconnect();
     void onSslErrors(const QList<QSslError>& errors);
-
 
 signals:
 

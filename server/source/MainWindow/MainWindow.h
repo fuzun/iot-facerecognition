@@ -21,20 +21,29 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QHash>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
+class QListWidgetItem;
+class Client;
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
+
+    QHash<QListWidgetItem *, Client *> clientListItemMap;
 
 public:
     MainWindow(QWidget *parent = nullptr, class Server* _server = nullptr);
     ~MainWindow();
 
-    friend class UIInterface;
+
+public slots:
+    void newClient(class Client* client);
+    void print(const QString& message);
 
 signals:
     void end();
@@ -43,8 +52,12 @@ private slots:
     void on_quitButton_clicked();
     void on_aboutButton_clicked();
 
+
+
 private:
     Ui::MainWindow *ui;
     class Server* server;
+
+    QString getClientName(Client *client);
 };
 #endif // MAINWINDOW_H

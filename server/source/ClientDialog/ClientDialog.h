@@ -21,31 +21,44 @@
 #define CLIENTDIALOG_H
 
 #include <QDialog>
+#include <QGraphicsPixmapItem>
+#include <QTimer>
 
 namespace Ui {
 class ClientDialog;
 }
+
+class Client;
 
 class ClientDialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit ClientDialog(QWidget *parent = nullptr);
+    explicit ClientDialog(Client* client, QWidget *parent = nullptr);
     ~ClientDialog();
-
-    friend class UIInterface;
 
 private:
     Ui::ClientDialog *ui;
 
-private:
-signals:
-    void sDestroy();
+    QGraphicsPixmapItem primaryDisplay;
+    QGraphicsPixmapItem secondaryDisplay;
+    QGraphicsPixmapItem tertiaryDisplay;
+
+    QTimer secondaryDisplayCleaner;
+    QTimer tertiaryDisplayCleaner;
 
 private slots:
     void on_okButton_clicked();
-    void reject() override;
+
+public slots:
+    void updatePrimaryDisplay(const QPixmap& pixmap);
+
+    void drawTextBox(const QVector<QPair<float, QString>> & list);
+    void drawFaceIdentificators(const QVector<QPair<QRect, QString>>& identificators);
+
+    void print(const QString& message);
+
 };
 
 #endif // CLIENTDIALOG_H

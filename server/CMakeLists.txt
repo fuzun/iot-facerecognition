@@ -29,12 +29,9 @@ find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Widgets WebSockets REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Widgets WebSockets REQUIRED)
 
 set(PROJECT_SOURCES
-                source/Client/ClientWorker.cpp
                 source/ClientDialog/ClientDialog.cpp
-                source/ClientHandler/ClientHandler.cpp
                 source/Client/Client.cpp
                 source/DLIBWorker/DLIBWorker.cpp
-                source/UIInterface/UIInterface.cpp
                 source/Server/Server.cpp
                 source/SocketHandler/SocketHandler.cpp
                 source/main.cpp
@@ -88,10 +85,8 @@ endif()
 target_include_directories(iot-facerecognition-server
 	PRIVATE
 		source/ClientDialog
-		source/ClientHandler
 		source/Client
 		source/DLIBWorker
-		source/UIInterface
 		source/MainWindow
 		source/Server
 		source/SocketHandler
@@ -102,4 +97,4 @@ target_compile_definitions(iot-facerecognition-server
   PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG> VER=${APP_VERSION})
 target_link_libraries(iot-facerecognition-server
   PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::WebSockets dlib::dlib)
-  
+

@@ -22,7 +22,16 @@
 
 #include <QObject>
 #include <QVariant>
+
 #include <QThread>
+
+class QWebSocket;
+class QGraphicsPixmapItem;
+class QTimer;
+class QListWidgetItem;
+class QThread;
+class QSettings;
+class DLIBWorker;
 
 struct Settings
 {
@@ -32,36 +41,19 @@ struct Settings
     std::atomic<bool> faceRecognitionEnabled = true;
 };
 
-class QWebSocket;
-class QGraphicsPixmapItem;
-class QTimer;
-class QListWidgetItem;
-class ClientDialog;
-class QThread;
-class QSettings;
-class ClientWorker;
-
 class Client : public QObject
 {
     Q_OBJECT
 
     Settings settings;
-
-    QWebSocket* socket;
-
+    DLIBWorker *dlibWorker = nullptr;
     QString name {"?"};
 
-    QGraphicsPixmapItem* primaryDisplay;
-    QGraphicsPixmapItem* secondaryDisplay;
-    QGraphicsPixmapItem* tertiaryDisplay;
+    QThread dlibWorkerThread;
 
-    QTimer* clearSecondaryDisplayTimer;
+protected:
+    QWebSocket *socket = nullptr;
 
-    QListWidgetItem* listItem = nullptr;
-    ClientDialog* dialog = nullptr;
-
-    QThread workerThread;
-    ClientWorker *worker = nullptr;
 
 public:
     inline static const char * keyCommand = "command";
@@ -76,42 +68,46 @@ public:
         SETTING_OBJDETECTIONENABLED = 5,
         SETTING_LABELCOUNT = 6,
         SETTING_DETERMINISTICOBJECTDETECTION = 7,
-        SETTING_FACERECOGNITIONENABLED = 8
+        SETTING_FACERECOGNITIONENABLED = 8,
+        INIT_REQUEST = 9
     };
 
-    explicit Client(QObject *parent, QWebSocket* _socket, QSettings* config);
+    explicit Client(QObject *parent, QWebSocket* _socket, QSettings* _config);
     ~Client();
 
-    void setPrimaryDisplayItem(QGraphicsPixmapItem* item);
-    void setSecondaryDisplayItem(QGraphicsPixmapItem* item);
-    void setTertiaryDisplayItem(QGraphicsPixmapItem* item);
-
-    QString getName() const;
-
-    QListWidgetItem* getListWidgetItem() const;
-    ClientDialog* getDialog() const;
-
-    void setListWidgetItem(QListWidgetItem* _listItem);
-    void setDialog(ClientDialog* _dialog);
 
 private:
     qint64 sendTextMessage(const QString& ctx);
     qint64 sendBinaryMessage(const QByteArray& ctx);
 
 public slots:
-    void processCommand(Client::Command cmd, const QVariant& ctx);
-    void processBinaryMessage(const QByteArray& data);
-
-    void sendCommand(Command cmd, const QVariant& ctx = QVariant());
+    void sendCommand(Client::Command cmd, const QVariant& ctx = QVariant());
+    QString getName() const;
 
 private slots:
-    void processDlibWorkerFaceResults(const QVector<QPair<QRect, QString>>& results);
-    void processDlibWorkerObjectResults(const QVector<QPair<float, QString>>& results);
+    void processFaceResults(const QVector<QPair<QRect, QString>>& results);
+    void processObjectResults(const QVector<QPair<float, QString>> &results);
+
+    void processTextMessage(const QString& message);
+    void processBinaryMessage(const QByteArray& data);
+    void processCommand(Client::Command cmd, const QVariant& ctx);
 
 public:
 signals:
-    void clientNameChanged(const QString& name);
+    void nameChanged(const QString& name);
+    void commandReceived(Client::Command cmd, const QVariant& ctx);
+
+    void primaryDisplayUpdated(const QPixmap& pixmap);
+
+    void doneFace(const QVector<QPair<QRect, QString>>&);
+    void doneObject(const QVector<QPair<float, QString>> &);
+
     void log(const QString& str);
+
+private:
+signals:
+    void processImage(const QByteArray& buffer);
+
 };
 
 Q_DECLARE_METATYPE(Client::Command);

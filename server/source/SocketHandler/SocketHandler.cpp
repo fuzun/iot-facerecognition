@@ -1,26 +1,43 @@
-
+/*
+*    iot-facerecognition-server
+*
+*    Copyright (C) 2020, fuzun
+*
+*    This program is free software: you can redistribute it and/or modify
+*    it under the terms of the GNU General Public License as published by
+*    the Free Software Foundation, either version 3 of the License, or
+*    (at your option) any later version.
+*
+*    This program is distributed in the hope that it will be useful,
+*    but WITHOUT ANY WARRANTY; without even the implied warranty of
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*    GNU General Public License for more details.
+*
+*    You should have received a copy of the GNU General Public License
+*    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
 #include "SocketHandler.h"
 
+#include <QWebSocket>
 #include <QWebSocketServer>
-#include <QtNetwork/QSslCertificate>
-#include <QtNetwork/QSslKey>
-#include <QtNetwork/QSslError>
+#include <QSslCertificate>
+#include <QSslKey>
+#include <QSslError>
 #include <QFile>
 #include <QSslCertificate>
-#include <QWebSocket>
 #include <QSettings>
 
 #include <stdexcept>
 
-#include "Server/Server.h"
-#include "ClientHandler/ClientHandler.h"
-#include "UIInterface/UIInterface.h"
+#include "Client/Client.h"
+
 #include "config.h"
 
-SocketHandler::SocketHandler(QObject *parent, UIInterface *&_uiInterface, ClientHandler *&_clientHandler, QSettings* config)
+Q_DECLARE_METATYPE(QWebSocket*)
+
+SocketHandler::SocketHandler(QObject *parent, QSettings* config)
     : QObject(parent),
-      clientHandler(_clientHandler),
-      uiInterface(_uiInterface)
+    m_config(config)
 {
     config->beginGroup(CONFIG_CRT);
     m_testMode = config->value(CONFIG_CRT_TESTMODE, CONFIG_CRT_DEFAULT_TESTMODE).toBool();
@@ -35,8 +52,10 @@ SocketHandler::SocketHandler(QObject *parent, UIInterface *&_uiInterface, Client
     m_serverName = config->value(CONFIG_CONN_SERVERNAME, CONFIG_CONN_DEFAULT_SERVERNAME).toString();
     config->endGroup();
 
-    webSocketServer = new QWebSocketServer(m_serverName, QWebSocketServer::SslMode::SecureMode, this);
-    uiInterface->log("QWebSocketServer is created!");
+    webSocketServer = new QWebSocketServer(m_serverName, QWebSocketServer::SslMode::SecureMode, nullptr);
+    webSocketServer->moveToThread(&socketThread);
+    connect(&socketThread, &QThread::finished, webSocketServer, &QObject::deleteLater);
+    socketThread.start();
 
     QSslConfiguration sslConfiguration;
     QFile crtFile(m_crtFile);
@@ -51,33 +70,46 @@ SocketHandler::SocketHandler(QObject *parent, UIInterface *&_uiInterface, Client
     sslConfiguration.setLocalCertificate(certificate);
     sslConfiguration.setPrivateKey(sslKey);
     sslConfiguration.setProtocol(QSsl::TlsV1_3OrLater);
-    webSocketServer->setSslConfiguration(sslConfiguration);
 
-    if (webSocketServer->listen(QHostAddress::Any, m_port))
-    {
-        connect(webSocketServer, &QWebSocketServer::newConnection, this, &SocketHandler::onNewConnection);
-        connect(webSocketServer, &QWebSocketServer::sslErrors, this, &SocketHandler::onSslErrors);
-        uiInterface->log("Started listening on port:" + QString::number(m_port));
-    }
-    else
-    {
-        throw std::runtime_error("QWebSocketServer can not listen!");
-    }
+    QMetaObject::invokeMethod(webSocketServer, [this, sslConfiguration] () {
+            webSocketServer->setSslConfiguration(sslConfiguration);
+
+            if (webSocketServer->listen(QHostAddress::Any, m_port))
+            {
+                connect(webSocketServer, &QWebSocketServer::newConnection, this, &SocketHandler::onNewConnection);
+                connect(webSocketServer, &QWebSocketServer::sslErrors, this, &SocketHandler::onSslErrors);
+                emit ("Started listening on port:" + QString::number(m_port));
+            }
+            else
+            {
+                throw std::runtime_error("QWebSocketServer can not listen!");
+            }
+    }, Qt::BlockingQueuedConnection);
 }
 
 SocketHandler::~SocketHandler()
 {
-    webSocketServer->close();
-    uiInterface->log("Stopped listening.");
+    QMetaObject::invokeMethod(webSocketServer, [this] () {
+            webSocketServer->close();
+            emit log("Stopped listening.");
+        }, Qt::BlockingQueuedConnection);
+
+
+    socketThread.quit();
+    socketThread.wait();
 }
 
 void SocketHandler::onNewConnection()
 {
-    uiInterface->log("Connecting a client...");
+    emit log("A client has connected!");
     QWebSocket *socket = webSocketServer->nextPendingConnection();
 
     connect(socket, &QWebSocket::disconnected, this, &SocketHandler::onDisconnect);
-    clientHandler->newClient(socket);
+
+    Client *client = new Client(nullptr, socket, m_config);
+    client->moveToThread(socket->thread());
+
+    emit newClient(client);
 }
 
 void SocketHandler::onSslErrors(const QList<QSslError>& errors)
@@ -101,5 +133,4 @@ void SocketHandler::onDisconnect()
     {
         socket->deleteLater();
     }
-    clientHandler->removeClient(socket);
 }

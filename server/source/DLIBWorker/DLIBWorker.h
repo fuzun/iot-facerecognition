@@ -34,6 +34,8 @@ class DLIBWorker : public QObject
 {
     Q_OBJECT
 
+    friend class Client;
+
 public:
     using Face = std::tuple<QString, dlib::rectangle, dlib::matrix<float, 0, 1>>;
     using Object = Face;

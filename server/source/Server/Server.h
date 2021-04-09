@@ -27,15 +27,22 @@ class Server : public QObject
     Q_OBJECT
 
 private:
-    class QSettings     *config;
-    class MainWindow    *mainWindow;
-    class SocketHandler *socketHandler;
-    class ClientHandler *clientHandler;
-    class UIInterface   *uiInterface;
+    class QSettings     *config = nullptr;
+    class MainWindow    *mainWindow = nullptr;
+    class SocketHandler *socketHandler = nullptr;
+
+    class QFile* logFile = nullptr;
+    class QTextStream* logStream = nullptr;
+
+private slots:
+    void log(const QString& message);
+
 
 public:
     explicit Server(QObject *parent = nullptr);
     ~Server();
+
+    static QString generateDateTime();
 
 signals:
     void end();

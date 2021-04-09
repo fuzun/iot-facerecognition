@@ -21,13 +21,20 @@
 
 #include <QSettings>
 #include <QApplication>
+#include <QWebSocket>
+#include <QFile>
 
 #include "MainWindow/MainWindow.h"
-#include "ClientHandler/ClientHandler.h"
 #include "SocketHandler/SocketHandler.h"
-#include "UIInterface/UIInterface.h"
+#include "Client/Client.h"
 
 #include "config.h"
+
+#ifdef NDEBUG
+#include <iostream>
+#endif
+
+Q_DECLARE_METATYPE(QWebSocket*)
 
 Server::Server(QObject *parent)
     : QObject(parent)
@@ -38,29 +45,86 @@ Server::Server(QObject *parent)
     bool guiEnabled = config->value(CONFIG_GUI_ENABLE, CONFIG_GUI_DEFAULT_ENABLE).toBool();
     config->endGroup();
 
-    if(guiEnabled)
+    config->beginGroup(CONFIG_LOG);
+    bool logEnabled = config->value(CONFIG_LOG_ENABLE, CONFIG_LOG_DEFAULT_ENABLE).toBool();
+    QString logFileName = config->value(CONFIG_LOG_LOCATION, CONFIG_LOG_DEFAULT_LOCATION).toString();
+    config->endGroup();
+
+    if (logEnabled)
+    {
+        logFile = new QFile(logFileName, this);
+        if (!logFile->open(QFile::Text | QFile::Append))
+        {
+            log("Can't write to log file. Logging to file is disabled.");
+        }
+        else
+        {
+            logStream = new QTextStream(logFile);
+        }
+    }
+
+    if (guiEnabled)
     {
         mainWindow = new MainWindow(nullptr);
         connect(mainWindow, &MainWindow::end, this, &Server::end, Qt::QueuedConnection);
         mainWindow->show();
     }
-    else
+
+    qRegisterMetaType<QWebSocket*>();
+
+    socketHandler = new SocketHandler(this, config);
+
+    if (mainWindow)
     {
-        mainWindow = nullptr;
+        connect(socketHandler, &SocketHandler::newClient, mainWindow, &MainWindow::newClient);
+        connect(socketHandler, &SocketHandler::log, mainWindow, &MainWindow::print);
     }
 
-    uiInterface = new UIInterface(this, mainWindow, config);
-    clientHandler = new ClientHandler(this, uiInterface, config);
-    socketHandler = new SocketHandler(this, uiInterface, clientHandler, config);
+    connect(socketHandler, &SocketHandler::log, this, &Server::log);
+
+    connect(socketHandler, &SocketHandler::newClient, this, [this](Client* client) {
+        connect(client, &Client::log, this, &Server::log);
+    });
 }
 
 Server::~Server()
 {
-    // order is important
-    delete clientHandler;
-    delete socketHandler;
+    logStream->flush();
+    delete logStream;
 
-    delete uiInterface;
+    if(logFile->isOpen())
+    {
+        logFile->flush();
+        logFile->close();
+    }
 
-    delete mainWindow;
+    delete logFile;
+}
+
+QString Server::generateDateTime()
+{
+    QDateTime dateTime = QDateTime::currentDateTime();
+    return dateTime.toString("dd-MM-yyyy / hh:mm:ss");
+}
+
+void Server::log(const QString &message)
+{
+    QString preface = QString("[%1]: ").arg(generateDateTime());
+
+    if ( const auto ptrClient = qobject_cast<Client*>(sender()) )
+    {
+        preface += ptrClient->getName() + ": ";
+    }
+
+#ifdef NDEBUG
+    std::cout << preface.toStdString() << message.toStdString() << std::endl;
+#else
+    qDebug((preface + message).toStdString().c_str());
+#endif
+
+    if (logStream)
+    {
+        *logStream << preface << message;
+        Qt::endl(*logStream);
+    }
 }

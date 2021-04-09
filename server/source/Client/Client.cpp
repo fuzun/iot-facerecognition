@@ -20,81 +20,92 @@
 #include "Client.h"
 
 #include <QWebSocket>
-#include <QGraphicsPixmapItem>
+
 #include <QThreadPool>
+
 #include <QApplication>
 #include <QPainter>
 #include <QTimer>
-#include <QListWidgetItem>
+
 #include <QThread>
+
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QJsonArray>
 
-#include "Client/ClientWorker.h"
-#include "DLIBWorker/DLIBWorker.h"
-#include "ClientDialog/ClientDialog.h"
-#include "ClientHandler/ClientHandler.h"
+#include <QMetaMethod>
 
-Client::Client(QObject *parent, QWebSocket* _socket, QSettings* config)
-    : QObject(parent),
+#include "DLIBWorker/DLIBWorker.h"
+
+Client::Client(QObject *parent, QWebSocket* _socket, QSettings* _config) :
+    QObject(parent),
     socket(_socket)
 {
+    assert(_socket);
+    assert(_config);
+
     qRegisterMetaType<QVector<QPair<QRect, QString>>>();
     qRegisterMetaType<QVector<QPair<float,QString>>>();
-
     qRegisterMetaType<Client::Command>();
 
-    worker = new ClientWorker(nullptr, config, &settings);
-    worker->moveToThread(&workerThread);
+    qRegisterMetaType<QAbstractSocket::SocketError>();
 
-    QObject::connect(&workerThread, &QThread::finished, worker, &QObject::deleteLater);
-    workerThread.start();
+    // defer until proper thread is assigned:
+    QMetaObject::invokeMethod(this, [this, _config]() {
+            QObject::connect(socket, &QWebSocket::binaryMessageReceived, this, &Client::processBinaryMessage);
+            QObject::connect(socket, &QWebSocket::textMessageReceived, this, &Client::processTextMessage);
+            QObject::connect(this, &Client::commandReceived, this, &Client::processCommand);
 
-    QMetaObject::invokeMethod(worker, &ClientWorker::init, Qt::BlockingQueuedConnection);
+            QObject::connect(socket, QOverload<QAbstractSocket::SocketError>::of(&QWebSocket::error), this, [this]() {
+                assert(false);
+                emit log(QString("Socket error: %1").arg(socket->errorString()));
+            });
 
-    QObject::connect(worker, &ClientWorker::log, this, &Client::log);
-    QObject::connect(worker, &ClientWorker::commandReceived, this, &Client::processCommand);
-    QObject::connect(worker, &ClientWorker::sendCommand, this, &Client::sendCommand);
+            QObject::connect(socket, &QWebSocket::sslErrors, this, [this](const QList<QSslError> &errors) {
+                assert(false);
+                for (const auto& it : errors)
+                {
+                    emit log(QString("Socket SSL Error: %1").arg(it.errorString()));
+                }
+            });
 
-    QObject::connect(worker->getDlibWorker(), &DLIBWorker::doneFace, this, &Client::processDlibWorkerFaceResults);
-    QObject::connect(worker->getDlibWorker(), &DLIBWorker::doneObject, this, &Client::processDlibWorkerObjectResults);
+            QObject::connect(socket, &QWebSocket::disconnected, this, [this]() {
+                emit log(QString("Disconnected. Close reason: %1").arg(socket->closeReason()));
+            });
 
-    QObject::connect(socket, &QWebSocket::binaryMessageReceived, this, &Client::processBinaryMessage);
 
-    QObject::connect(socket, &QWebSocket::textMessageReceived, worker, &ClientWorker::processTextMessage);
-    QObject::connect(socket, &QWebSocket::binaryMessageReceived, worker, &ClientWorker::processBinaryMessage);
+            dlibWorker = new DLIBWorker(_config, &settings);
+            dlibWorker->moveToThread(&dlibWorkerThread);
+            connect(&dlibWorkerThread, &QThread::finished, dlibWorker, &QObject::deleteLater);
+            connect(this, &Client::processImage, dlibWorker, &DLIBWorker::process);
+            connect(dlibWorker, &DLIBWorker::doneFace, this, &Client::doneFace);
+            connect(dlibWorker, &DLIBWorker::doneObject, this, &Client::doneObject);
 
-    QObject::connect(socket, QOverload<QAbstractSocket::SocketError>::of(&QWebSocket::error), this, [this]() {
-        assert(false);
-        log(QString("Socket error: %1").arg(socket->errorString()));
-    });
+            connect(this, &Client::doneFace, this, &Client::processFaceResults);
+            connect(this, &Client::doneObject, this, &Client::processObjectResults);
 
-    QObject::connect(socket, &QWebSocket::sslErrors, this, [this](const QList<QSslError> &errors) {
-        assert(false);
-        for (const auto& it : errors)
-        {
-            log(QString("Socket SSL Error: %1").arg(it.errorString()));
-        }
-    });
+            connect(dlibWorker, &DLIBWorker::log, this, &Client::log);
+            dlibWorkerThread.start();
 
-    QObject::connect(socket, &QWebSocket::disconnected, this, [this]() {
-        log(QString("Disconnected. Close reason: %1").arg(socket->closeReason()));
-    });
+            QObject::connect(socket, &QWebSocket::destroyed, this, [this]() {
+                socket = nullptr;
+                this->deleteLater();
+            });
 
-    clearSecondaryDisplayTimer = new QTimer(this);
-    clearSecondaryDisplayTimer->setInterval(1000);
-    connect(clearSecondaryDisplayTimer, &QTimer::timeout, [this](){
-        secondaryDisplay->setPixmap(QPixmap());
-    });
+            sendCommand(Command::INIT_REQUEST);
+
+        }, Qt::QueuedConnection);
 }
 
 Client::~Client()
 {
-    workerThread.quit();
-    workerThread.wait();
+    emit log("Stopping processing...");
 
-    socket->flush();
+    dlibWorkerThread.quit();
+    dlibWorkerThread.wait();
+
+    if (socket)
+        socket->flush();
 }
 
 QString Client::getName() const
@@ -102,33 +113,106 @@ QString Client::getName() const
     return name;
 }
 
-void Client::setPrimaryDisplayItem(QGraphicsPixmapItem* item)
-{
-    primaryDisplay = item;
-}
-
-void Client::setSecondaryDisplayItem(QGraphicsPixmapItem* item)
-{
-    secondaryDisplay = item;
-}
-
-void Client::setTertiaryDisplayItem(QGraphicsPixmapItem *item)
-{
-    tertiaryDisplay = item;
-}
-
 void Client::processBinaryMessage(const QByteArray& data)
 {
-    if(dialog)
+    if(!dlibWorker->isBusy())
+    {
+        emit processImage(data);
+    }
+
+    if (isSignalConnected(QMetaMethod::fromSignal(&Client::primaryDisplayUpdated)))
     {
         dlib::array2d<dlib::rgb_pixel> img(DLIBWorker::decodeJPEG(data, nullptr));
 
         if (img.size() <= 0)
             return;
 
-        QPixmap pixmap(QPixmap::fromImage(QImage((unsigned char*)dlib::image_data(img), img.nc(), img.nr(), QImage::Format_RGB888)));
-        primaryDisplay->setPixmap(pixmap);
+        emit primaryDisplayUpdated(QPixmap::fromImage(QImage(static_cast<unsigned char*>(dlib::image_data(img)), img.nc(), img.nr(), QImage::Format_RGB888)));
     }
+}
+
+void Client::processFaceResults(const QVector<QPair<QRect, QString>>& results)
+{
+    if (results.isEmpty())
+        return;
+
+    emit log("DLIB has found faces with following properties:");
+
+    int maxX = 0, maxY = 0;
+    QVariantList ctx;
+    for(const auto &it : results)
+    {
+        QVariantHash i;
+        int x = it.first.x();
+        int y = it.first.y();
+        int width = it.first.width();
+        int height = it.first.height();
+
+        if (x + width > maxX)
+            maxX = x + width;
+
+        if (y + height > maxY)
+            maxY = y + height;
+
+        QString tag = it.second;
+
+        i["x"] = x;
+        i["y"] = y;
+        i["width"] = width;
+        i["height"] = height;
+        i["tag"] = tag;
+
+        ctx.push_back(i);
+        emit log(QString("Tag: \"%0\" - X: %1, Y: %2, W: %3, H: %4")
+                     .arg(tag)
+                     .arg(x)
+                     .arg(y)
+                     .arg(width)
+                     .arg(height));
+    }
+    emit log("Sending found face properties to the client.");
+    sendCommand(Command::MESSAGE_TAG_FACE, ctx);
+}
+
+void Client::processObjectResults(const QVector<QPair<float, QString> > &results)
+{
+    if (results.isEmpty())
+        return;
+
+    QStringList strList;
+    QVariantList list;
+    for (const auto& i : results)
+    {
+        QVariantHash hash;
+
+        hash["prediction"] = i.first;
+        hash["label"] = i.second;
+
+        strList.push_back(QString("%1: %2").arg(i.first).arg(i.second));
+        list.push_back(hash);
+    }
+
+    emit log("DLIB has found objects: " + strList.join(","));
+    emit log("Sending found object properties to the client.");
+    sendCommand(Command::MESSAGE_TAG_OBJECT, list);
+}
+
+void Client::processTextMessage(const QString &message)
+{
+    QJsonDocument jDoc = QJsonDocument::fromJson(message.toUtf8());
+
+    if (jDoc.isNull() || jDoc.isEmpty() || !jDoc.isObject())
+        return;
+
+    const unsigned int command = (unsigned)(jDoc[keyCommand].toInt(-1));
+
+    QJsonValue ctxVal = jDoc[keyContext];
+    QVariant context;
+
+    if (ctxVal != QJsonValue::Undefined)
+        context = ctxVal.toVariant();
+
+    emit commandReceived(static_cast<Command>(command), context);
 }
 
 void Client::sendCommand(Client::Command cmd, const QVariant &ctx)
@@ -142,106 +226,6 @@ void Client::sendCommand(Client::Command cmd, const QVariant &ctx)
     QJsonDocument jDoc(obj);
 
     sendTextMessage(QString(jDoc.toJson(QJsonDocument::JsonFormat::Compact)));
-}
-
-void Client::processDlibWorkerFaceResults(const QVector<QPair<QRect, QString>>& results)
-{
-    // log("DLIB could not find any face in the given image frame!"); // this bloats the log
-    if(results.size() > 0)
-    {
-        if(dialog)
-        {
-            // process dlib output on dialog window
-            clearSecondaryDisplayTimer->stop();
-            QPixmap pixmap(primaryDisplay->pixmap().width(), primaryDisplay->pixmap().height());
-            pixmap.fill(Qt::transparent);
-            for(const auto &it : results)
-            {
-                QPainter paint(&pixmap);
-
-                QColor colorLine(128, 0, 0, 200);
-                QColor colorText(255, 255, 255, 255);
-
-                QFont font;
-                font.setPointSize(18);
-                paint.setFont(font);
-
-                const QRect& rect = it.first;
-                paint.setPen(QPen(colorLine, 3));
-                paint.drawRect(rect);
-
-                const QString& str = it.second;
-
-                QFontMetrics fMetrics(paint.font());
-                QRect textRect(rect.x(), rect.y() + rect.height(), fMetrics.size(Qt::TextSingleLine, str).width(), fMetrics.size(Qt::TextSingleLine, str).height());
-                paint.fillRect(textRect, QBrush(colorLine));
-
-                paint.setPen(colorText);
-                paint.drawText(textRect, str);
-
-                secondaryDisplay->setPixmap(pixmap);
-            }
-            clearSecondaryDisplayTimer->start();
-        }
-    }
-}
-
-void Client::processDlibWorkerObjectResults(const QVector<QPair<float, QString> > &results)
-{
-    if (results.isEmpty())
-        return;
-
-    if (dialog)
-    {
-        QPixmap pixmap(primaryDisplay->pixmap().width(), primaryDisplay->pixmap().height());
-        pixmap.fill(Qt::transparent);
-
-        int counter = 0;
-        for (const auto& it : results)
-        {
-            QPainter paint(&pixmap);
-
-            QColor colorLine(128, 0, 0, 200);
-            QColor colorText(255, 255, 255, 255);
-
-            QFont font;
-            font.setPointSize(12);
-            paint.setFont(font);
-
-            const QString& str = QString("%1: %2").arg(it.first).arg(it.second);
-
-            QFontMetrics fMetrics(paint.font());
-            QRect textRect(20, 20 + fMetrics.size(Qt::TextSingleLine, str).height() * counter, fMetrics.size(Qt::TextSingleLine, str).width(), fMetrics.size(Qt::TextSingleLine, str).height());
-            paint.fillRect(textRect, QBrush(colorLine));
-
-            paint.setPen(colorText);
-            paint.drawText(textRect, str);
-
-            tertiaryDisplay->setPixmap(pixmap);
-
-            ++counter;
-        }
-    }
-}
-
-QListWidgetItem* Client::getListWidgetItem() const
-{
-    return listItem;
-}
-
-ClientDialog* Client::getDialog() const
-{
-    return dialog;
-}
-
-void Client::setListWidgetItem(QListWidgetItem* _listItem)
-{
-    listItem = _listItem;
-}
-
-void Client::setDialog(ClientDialog* _dialog)
-{
-    dialog = _dialog;
 }
 
 qint64 Client::sendTextMessage(const QString &ctx)
@@ -276,7 +260,7 @@ qint64 Client::sendBinaryMessage(const QByteArray &ctx)
     return ret;
 }
 
-void Client::processCommand(ClientWorker::Command cmd, const QVariant &ctx)
+void Client::processCommand(Command cmd, const QVariant &ctx)
 {
     switch(cmd)
     {
@@ -290,9 +274,47 @@ void Client::processCommand(ClientWorker::Command cmd, const QVariant &ctx)
                 _name = "noname";
 
             name = _name;
-            emit clientNameChanged(name);
+            emit nameChanged(name);
 
             sendCommand(Command::SETTING_NAME, name);
+            break;
+        }
+
+        case Command::MESSAGE:
+        {
+            emit log("Message: " + ctx.toString());
+            break;
+        }
+
+        case Command::SETTING_LABELCOUNT:
+        {
+            settings.labelCount = ctx.toULongLong();
+
+            sendCommand(Command::SETTING_LABELCOUNT, settings.labelCount.load());
+            break;
+        }
+
+        case Command::SETTING_OBJDETECTIONENABLED:
+        {
+            settings.objectDetectionEnabled = ctx.toBool();
+
+            sendCommand(Command::SETTING_OBJDETECTIONENABLED, settings.objectDetectionEnabled.load());
+            break;
+        }
+
+        case Command::SETTING_DETERMINISTICOBJECTDETECTION:
+        {
+            settings.deterministicObjectDetection = ctx.toBool();
+
+            sendCommand(Command::SETTING_DETERMINISTICOBJECTDETECTION, settings.deterministicObjectDetection.load());
+            break;
+        }
+
+        case Command::SETTING_FACERECOGNITIONENABLED:
+        {
+            settings.faceRecognitionEnabled = ctx.toBool();
+
+            sendCommand(Command::SETTING_FACERECOGNITIONENABLED, settings.faceRecognitionEnabled.load());
             break;
         }
 

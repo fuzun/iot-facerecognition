@@ -28,7 +28,7 @@
 #include <QJsonObject>
 #include <vector>
 
-#include <Client/Client.h>
+#include "Client/Client.h"
 
 #include <dlib/clustering.h>
 #include <dlib/image_io.h>
@@ -169,9 +169,10 @@ dlib::array2d<rgb_pixel> DLIBWorker::decodeJPEG(const QByteArray &jpegBuffer, vo
     {
         load_jpeg(img, buffer.constData(), buffer.size());
     }
-    catch(...)
+    catch(const std::exception& e)
     {
-
+        std::cerr << e.what() << std::endl;
+        emit log(QString("dlib exception: %1").arg(e.what()));
     }
 #endif
 
