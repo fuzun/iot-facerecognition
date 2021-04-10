@@ -130,7 +130,7 @@ class FaceRecognition:
                         counter = 0
                         for msg in self.msg[1]:
                             font = cv2.FONT_HERSHEY_SIMPLEX
-                            cv2.putText(frame2, str(msg), (int(20), int(20 + counter * 20)), font, 0.5, (0, 0, 200), 1,
+                            cv2.putText(frame2, "{}: {}".format(str(msg["prediction"]), str(msg["label"])), (int(20), int(20 + counter * 20)), font, 0.5, (0, 0, 200), 1,
                                         cv2.LINE_AA)
                             counter = counter + 1
                     cv2.imshow('facerecognition', frame2)
@@ -145,7 +145,10 @@ class FaceRecognition:
 
                 jdoc = json.loads(receive)
                 cmd = jdoc["command"]
-                ctx = jdoc["context"]
+                hasCtx = "context" in jdoc
+                ctx = None
+                if (hasCtx):
+                    ctx = jdoc["context"]
 
                 if cmd is int(FaceRecognition.Command.MESSAGE_TAG_FACE):
                     self.msg[0] = ctx
