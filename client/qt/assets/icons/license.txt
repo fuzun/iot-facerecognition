@@ -1,0 +1,11 @@
+All icons are used under Creative Commons(Attribution 3.0 unported) license (https://creativecommons.org/licenses/by/3.0).
+* Settings.svg file contains "gear, services, gears, preferences, settings icon" icon made by "MD Badsha Meah" which was available at (https://freeicons.io/basic-symbol/gear-services-gears-preferences-settings-icon-38524).
+* Camera.svg file contains "materializecss, photo, camera icon" icon made by "Raj Dev" which was available at (https://freeicons.io/free-valentines-day/materializecss-photo-camera-icon-7780).
+* Log.svg file contains "file, text icon" icon made by "Anu Rocks" which was available at (https://freeicons.io/regular-life-icons/file-text-icon-17825).
+* About.svg file contains "help, support, information, info, about icon" icon made by "MD Badsha Meah" which was available at (https://freeicons.io/basic-symbol/help-support-information-info-about-icon-38500).
+* Message.svg file contains 'envelope icon" icon made by "Anu Rocks" which was available at (https://freeicons.io/regular-life-icons/envelope-icon-17807).
+* Shutdown.svg file contains "shutdown, off, on, power icon" icon made by "MD Badsha Meah" which was available at (https://freeicons.io/basic-symbol/shutdown-off-on-power-icon-38515).
+* Warning.svg file contains "sign, warning icon" icon made by "Anu Rocks" which was available at (https://freeicons.io/regular-life-icons/sign-warning-icon-17898).
+* Error.svg file contains "sign, error icon" icon made by "Anu Rocks" which was available at (https://freeicons.io/regular-life-icons/sign-error-icon-17891).
+* Information.svg file contains "sign, info icon" icon made by "Anu Rocks" which was available at (https://freeicons.io/regular-life-icons/sign-info-icon-17892).
+* Statistics.svg file contains "statistics icon" icon made by "Free Preloaders" which was available at (https://freeicons.io/office-and-workstation-icons-6/statistics-icon-19021).

@@ -1,0 +1,19 @@
+<RCC>
+    <qresource prefix="/">
+        <file>bgImages/dark.jpg</file>
+        <file>bgImages/light.jpg</file>
+        <file>icons/Camera.svg</file>
+        <file>icons/Log.svg</file>
+        <file>icons/Settings.svg</file>
+        <file>icons/About.svg</file>
+        <file>bgImages/license.txt</file>
+        <file>icons/license.txt</file>
+        <file>icons/Message.svg</file>
+        <file>icons/Shutdown.svg</file>
+        <file>icons/Error.svg</file>
+        <file>icons/Information.svg</file>
+        <file>icons/Warning.svg</file>
+        <file>icons/Statistics.svg</file>
+        <file>icons/built-with-qt.png</file>
+    </qresource>
+</RCC>

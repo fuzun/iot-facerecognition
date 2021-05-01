@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="ORANGE_BACKGROUNDS" width="80" height="80" enable-background="new 0 0 96 96" version="1.1" viewBox="0 0 80 80" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:osb="http://www.openswatchbook.org/uri/2009/osb" xmlns:xlink="http://www.w3.org/1999/xlink"><defs>
+	
+
+		
+		
+		
+		
+	
+	
+<linearGradient id="HIGHLIGHT_RIM_3_-9" x1="39" x2="39" y1="-7.7793" y2="133.27" gradientTransform="translate(1,17)" gradientUnits="userSpaceOnUse"><stop stop-color="#fff" offset="0"/><stop offset="1"/></linearGradient><linearGradient id="linearGradient3027" x1="39" x2="39" y1="-6.0801" y2="74.07" gradientTransform="translate(1,17)" gradientUnits="userSpaceOnUse"><stop stop-color="#fff" offset="0"/><stop stop-color="#FBFBFB" offset=".238"/><stop stop-color="#EFF0F0" offset=".4717"/><stop stop-color="#DCDDDE" offset=".7037"/><stop stop-color="#C0C3C5" offset=".9334"/><stop stop-color="#BBBEC0" offset=".9697"/></linearGradient><style>.cls-1{fill:#2d3e50;}.cls-2{fill:#2e79bd;}</style></defs>
+
+
+<g transform="translate(0,-16)" display="none"><rect y="16" width="80" height="80" display="inline" fill-opacity="0"/></g><g transform="translate(0,-16)"><path id="WHITE_1_" d="m79 56c0 28.893-10.105 39-39 39s-39-10.107-39-39c0-28.894 10.105-39 39-39s39 10.106 39 39z" fill="url(#linearGradient3027)"/><path d="m40 17c-28.894 0-39 10.106-39 39 0 28.892 10.106 39 39 39 28.896 0 39-10.108 39-39 0-28.894-10.104-39-39-39zm0 77.048c-28.429 0-38.025-9.602-38.025-38.048s9.596-38.047 38.025-38.047c28.43 0 38.025 9.601 38.025 38.047s-9.595 38.048-38.025 38.048z" fill="url(#HIGHLIGHT_RIM_3_-9)" fill-opacity=".25"/></g><g transform="translate(0,-16)"><g transform="matrix(.39327 0 0 .39327 14.831 30.831)"><path class="cls-1" d="m64 6.0564a57.944 57.944 0 1 0 57.944 57.944 58.009 58.009 0 0 0-57.944-57.944zm0 104.45a46.503 46.503 0 1 1 46.503-46.503 46.555 46.555 0 0 1-46.503 46.503z"/><circle class="cls-2" cx="61.488" cy="39.265" r="7.746"/><path class="cls-2" d="m56.417 53.954a4.6051 4.6051 0 0 0-3.8005 4.5348 4.6035 4.6035 0 0 0 4.6046 4.6046h0.45637v25.507h-2.4634a3.9401 3.9401 0 0 0-3.9401 3.9401 3.9401 3.9401 0 0 0 3.9401 3.9401h17.573a3.9401 3.9401 0 0 0 3.9401-3.9401 3.9401 3.9401 0 0 0-3.9401-3.9401h-2.4366v-32.56a3.9759 3.9759 0 0 0-4.7481-3.9003c-3.9754 0.78712-9.0276 1.7867-9.1852 1.8144z"/></g></g></svg>

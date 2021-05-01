@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="ORANGE_BACKGROUNDS" width="80" height="80" enable-background="new 0 0 96 96" version="1.1" viewBox="0 0 80 80" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:osb="http://www.openswatchbook.org/uri/2009/osb" xmlns:xlink="http://www.w3.org/1999/xlink"><defs>
+	
+
+		
+		
+		
+		
+	
+	
+<linearGradient id="HIGHLIGHT_RIM_3_-16" x1="39" x2="39" y1="-7.7793" y2="133.27" gradientTransform="translate(1,17)" gradientUnits="userSpaceOnUse"><stop stop-color="#fff" offset="0"/><stop offset="1"/></linearGradient><linearGradient id="linearGradient3021-89" x1="39" x2="39" y2="78.001" gradientTransform="translate(1,17)" gradientUnits="userSpaceOnUse"><stop stop-color="#F3CB00" offset="0"/><stop stop-color="#EDB200" offset=".2109"/><stop stop-color="#DE7400" offset=".6559"/><stop stop-color="#DC6A00" offset=".7212"/></linearGradient></defs>
+
+
+<g transform="translate(0,-16)" display="none"><rect y="16" width="80" height="80" display="inline" fill-opacity="0"/></g><g transform="translate(0,-16)"><path id="ORANGE1_2_" d="m79 56c0 28.893-10.105 39-39 39s-39-10.107-39-39c0-28.894 10.105-39 39-39s39 10.106 39 39z" fill="url(#linearGradient3021-89)"/><path d="m40 17c-28.894 0-39 10.106-39 39 0 28.892 10.106 39 39 39 28.896 0 39-10.108 39-39 0-28.894-10.104-39-39-39zm0 77.048c-28.429 0-38.025-9.602-38.025-38.048s9.596-38.047 38.025-38.047c28.43 0 38.025 9.601 38.025 38.047s-9.595 38.048-38.025 38.048z" fill="url(#HIGHLIGHT_RIM_3_-16)" fill-opacity=".25"/></g><g transform="translate(0,-16)"><g transform="matrix(1.1376 0 0 1.1376 12.696 27.559)"><g fill="#37474f"><rect x="23" y="5" width="2" height="36"/><rect transform="matrix(.707 .707 -.707 .707 33.523 -3.921)" x="20.5" y="31.4" width="2" height="14.2"/><rect transform="matrix(-.707 .707 -.707 -.707 72.487 46.995)" x="25.5" y="31.4" width="2" height="14.2"/></g><rect x="4" y="8" width="40" height="28" fill="#cfd8dc"/><g fill="#607d8b"><rect x="3" y="7" width="42" height="4"/><rect x="3" y="35" width="42" height="2"/><circle cx="31.5" cy="43.5" r="1.5"/><circle cx="16.5" cy="43.5" r="1.5"/></g><g fill="#c51162"><polygon points="11.9 26.9 14.1 29.1 20 23.1 26 29.1 34.1 21.1 31.9 18.9 26 24.9 20 18.9"/><polygon points="36 17 36 24 29 17"/></g></g></g></svg>

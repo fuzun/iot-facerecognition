@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="ORANGE_BACKGROUNDS" width="80" height="80" enable-background="new 0 0 96 96" version="1.1" viewBox="0 0 80 80" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:osb="http://www.openswatchbook.org/uri/2009/osb" xmlns:xlink="http://www.w3.org/1999/xlink"><defs>
+	
+
+		
+		
+		
+		
+	
+	
+<linearGradient id="HIGHLIGHT_RIM_3_-28" x1="39" x2="39" y1="-7.7793" y2="133.27" gradientTransform="translate(1,17)" gradientUnits="userSpaceOnUse"><stop stop-color="#fff" offset="0"/><stop offset="1"/></linearGradient><linearGradient id="linearGradient3021-15" x1="39" x2="39" y2="78.001" gradientTransform="translate(1,17)" gradientUnits="userSpaceOnUse"><stop stop-color="#9602DD" offset="0"/><stop stop-color="#7D02CC" offset=".2211"/><stop stop-color="#3F01A0" offset=".6877"/><stop stop-color="#3A019D" offset=".7212"/></linearGradient></defs>
+
+
+<g transform="translate(0,-16)" display="none"><rect y="16" width="80" height="80" display="inline" fill-opacity="0"/></g><g transform="translate(0,-16)"><path id="VIOLET1_1_" d="m79 56c0 28.893-10.105 39-39 39s-39-10.107-39-39c0-28.894 10.105-39 39-39s39 10.106 39 39z" fill="url(#linearGradient3021-15)"/><path d="m40 17c-28.894 0-39 10.106-39 39 0 28.892 10.106 39 39 39 28.896 0 39-10.108 39-39 0-28.894-10.104-39-39-39zm0 77.048c-28.429 0-38.025-9.602-38.025-38.048s9.596-38.047 38.025-38.047c28.43 0 38.025 9.601 38.025 38.047s-9.595 38.048-38.025 38.048z" fill="url(#HIGHLIGHT_RIM_3_-28)" fill-opacity=".25"/></g><g transform="translate(0,-16)"><g transform="matrix(.10858 0 0 .10858 12.203 28.203)"><path d="m512 137.07v301.87c0 18.133-13.867 32-32 32h-448c-18.133 0-32-13.867-32-32v-301.87c0-17.067 13.867-32 32-32h448c18.133 0 32 13.866 32 32z" fill="#f3705a"/><path d="m512 216v-78.933c0-17.067-13.867-32-32-32h-448c-18.133 0-32 14.933-32 32v78.933z" fill="#344a5e"/><circle cx="289.07" cy="287.47" r="145.07" fill="#415a6b"/><circle cx="289.07" cy="287.47" r="106.67" fill="#ced6e0"/><circle cx="289.07" cy="287.47" r="62.933" fill="#55c0eb"/><circle cx="332.8" cy="260.8" r="26.667" fill="#fff"/><path d="m118.4 181.87h-69.333c-5.333 0-9.6-4.267-9.6-9.6v-19.2c0-5.333 4.267-9.6 9.6-9.6h69.333c5.333 0 9.6 4.267 9.6 9.6v19.2c0 5.333-4.267 9.6-9.6 9.6z" fill="#ffd15c"/><path d="m106.67 75.2h-38.4c-5.333 0-9.6 4.267-9.6 9.6v19.2h57.6v-18.133c0-6.4-4.267-10.667-9.6-10.667z" fill="#415a6b"/><path d="m347.73 41.067h-117.33c-10.667 0-19.2 6.4-22.4 16l-16 48h196.27l-16-48c-4.267-9.6-13.867-16-24.534-16z" fill="#344a5e"/></g></g></svg>

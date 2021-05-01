@@ -1,0 +1,19 @@
+<RCC>
+    <qresource prefix="/">
+        <file>source/qml/main.qml</file>
+        <file>source/qml/Common.qml</file>
+        <file>source/qml/qmldir</file>
+        <file>source/qml/Views/MainView.qml</file>
+        <file>source/qml/Views/LogView.qml</file>
+        <file>source/qml/Views/SettingsView.qml</file>
+        <file>source/qml/Views/CameraView.qml</file>
+        <file>source/qml/Widgets/ModalPopup.qml</file>
+        <file>source/qml/Widgets/SettingsList.qml</file>
+        <file>source/qml/Views/CameraSettingsView.qml</file>
+        <file>source/qml/Popups/AboutPopup.qml</file>
+        <file>source/qml/Popups/ConnectionPopup.qml</file>
+        <file>source/qml/Popups/SendMessagePopup.qml</file>
+        <file>source/qml/Views/StatisticsView.qml</file>
+        <file>source/qml/Views/StatisticsSettingsView.qml</file>
+    </qresource>
+</RCC>
