@@ -338,11 +338,16 @@ void DLIBWorker::setupReference(const QVector<QPair<QString, QString>>& list)
 {
     for(const auto& it : list)
     {
-        const auto& faces = findFaces(it.second);
+        const auto filename = it.second;
+
+        const auto& faces = findFaces(filename);
 
         for (const auto& it2 : faces)
         {
-            referenceFaces.push_back(make_tuple(it.first, rectangle(), get<2>(it2)));
+            const auto tag = it.first;
+
+            emit log(QString("Resolved reference face with tag '%1' from the file '%2'!").arg(tag).arg(filename));
+            referenceFaces.push_back(make_tuple(tag, rectangle(), get<2>(it2)));
         }
     }
 }
