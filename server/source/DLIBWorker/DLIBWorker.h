@@ -107,6 +107,8 @@ private:
     bool                             m_busy;
     QString                          m_imageNetClassifierFile;
     size_t                           m_numCrops;
+    bool                             m_faceRecognitionInitialized = false;
+    bool                             m_objectRecognitionInitialized = false;
 
 #ifdef TURBOJPEG_AVAILABLE
     void* m_tjHandle = nullptr;
@@ -116,8 +118,11 @@ private:
 
     std::vector<Face> referenceFaces;
 
-    void setupReference(const QVector<QPair<QString, QString>>& list);
-    void setupImageNet();
+    void resolveReferenceFaces(const QVector<QPair<QString, QString>>& list);
+
+    bool initFaceRecognition();
+    bool initObjectRecognition();
+
 
     static std::vector<dlib::sample_pair> createGraph(const std::vector<Face>& faces, double threshold);
     static std::vector<Cluster> cluster(const std::vector<dlib::sample_pair>& graph, const std::vector<Face>& faces);

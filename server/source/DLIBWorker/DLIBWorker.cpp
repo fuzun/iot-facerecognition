@@ -24,6 +24,8 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QQueue>
+
 #include <vector>
 
 #include "Client/Client.h"
@@ -57,6 +59,8 @@ DLIBWorker::DLIBWorker(class QSettings* config, const Settings *settings)
     m_numCrops = config->value(CONFIG_DLIB_NUMCROPS, CONFIG_DLIB_DEFAULT_NUMCROPS).toULongLong();
     config->endGroup();
 
+    QQueue<QString> logQueue;
+
     QFile refFile(_refFile);
     if(refFile.open(QIODevice::ReadOnly))
     {
@@ -88,6 +92,10 @@ DLIBWorker::DLIBWorker(class QSettings* config, const Settings *settings)
             }
         }
     }
+    else
+    {
+        logQueue << QString("Could not open the reference file %1 !").arg(_refFile);
+    }
 
 #ifdef TURBOJPEG_AVAILABLE
     QMetaObject::invokeMethod(this, [this]() {
@@ -95,12 +103,10 @@ DLIBWorker::DLIBWorker(class QSettings* config, const Settings *settings)
     }, Qt::QueuedConnection);
 #endif
 
-    QMetaObject::invokeMethod(this, [this]() {
-        detector = get_frontal_face_detector();
-        string landmarkModel = m_faceLandmarkModelFile.toStdString();
-        string recogModel = m_faceRecognitionModelFile.toStdString();
-        deserialize(landmarkModel) >> sp;
-        deserialize(recogModel) >> net;
+    QMetaObject::invokeMethod(this, [this, logQueue]() mutable {
+        while (!logQueue.isEmpty())
+            emit log(logQueue.dequeue());
+
     }, Qt::QueuedConnection);
 }
 
@@ -332,7 +338,7 @@ std::vector<DLIBWorker::Cluster> DLIBWorker::cluster(const std::vector<sample_pa
     return clusters;
 }
 
-void DLIBWorker::setupReference(const QVector<QPair<QString, QString>>& list)
+void DLIBWorker::resolveReferenceFaces(const QVector<QPair<QString, QString>>& list)
 {
     for(const auto& it : list)
     {
@@ -350,11 +356,66 @@ void DLIBWorker::setupReference(const QVector<QPair<QString, QString>>& list)
     }
 }
 
-void DLIBWorker::setupImageNet()
+bool DLIBWorker::initFaceRecognition()
 {
-    deserialize(m_imageNetClassifierFile.toStdString()) >> net2 >> labels;
+    try
+    {
+        emit log(QString("Initializing face recognition..."));
 
-    snet.subnet() = net2.subnet();
+        string landmarkModel = m_faceLandmarkModelFile.toStdString();
+        string recogModel = m_faceRecognitionModelFile.toStdString();
+        deserialize(landmarkModel) >> sp;
+        deserialize(recogModel) >> net;
+
+        detector = get_frontal_face_detector();
+
+        emit log(QString("Successfully initialized face recognition!"));
+
+        emit log(QString("Resolving reference faces..."));
+        resolveReferenceFaces(m_refPhotoFileList);
+
+        if(referenceFaces.size() == 0)
+        {
+            emit log("WARNING: Reference face list is empty!");
+        }
+
+        m_faceRecognitionInitialized = true;
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << e.what() << std::endl;
+
+        emit log(QString("Could not parse the face landmark and/or recognition model files. Reason: %1").arg(e.what()));
+        emit log(QString("Could not initialize face recognition. Face recognition will not work!"));
+
+        m_faceRecognitionInitialized = false;
+    };
+
+    return m_faceRecognitionInitialized;
+}
+
+bool DLIBWorker::initObjectRecognition()
+{
+    try
+    {
+        deserialize(m_imageNetClassifierFile.toStdString()) >> net2 >> labels;
+        snet.subnet() = net2.subnet();
+
+        emit log(QString("Successfully initialized object recognition!"));
+
+        m_objectRecognitionInitialized = true;
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << e.what() << std::endl;
+
+        emit log(QString("Could not parse the ImageNet classifier file. Reason: %1").arg(e.what()));
+        emit log(QString("Could not initialize object recognition. Object recognition will not work!"));
+
+         m_objectRecognitionInitialized = false;
+    }
+
+    return m_objectRecognitionInitialized;
 }
 
 void DLIBWorker::process(const QByteArray& buffer)
@@ -374,78 +435,77 @@ void DLIBWorker::process(const QByteArray& buffer)
             return;
         }
 
-        if (m_settings->objectDetectionEnabled)
-        {
-            if (labels.empty())
+        [&]() {
+            if (m_settings->objectDetectionEnabled)
             {
-                setupImageNet();
-            }
-
-            matrix<rgb_pixel> crop;
-            dlib::array<matrix<rgb_pixel>> images;
-            matrix<rgb_pixel> imgMat = mat(img);
-
-            if (m_settings->deterministicObjectDetection)
-                crop_images(imgMat, images, nullptr, m_numCrops);
-            else
-                crop_images(imgMat, images, &rnd, m_numCrops);
-
-            matrix<float,1,1000> p = sum_rows(mat(snet(images.begin(), images.end()))) / m_numCrops;
-
-            QVector<QPair<float, QString>> result;
-
-            for (size_t k = 0; k < m_settings->labelCount; ++k)
-            {
-                unsigned long predicted_label = index_of_max(p);
-                result.append( { p(predicted_label), QString::fromStdString(labels[predicted_label]) } );
-                p(predicted_label) = 0;
-            }
-
-            emit doneObject(result);
-        }
-
-        if (m_settings->faceRecognitionEnabled)
-        {
-            if(referenceFaces.size() == 0)
-            {
-                if(m_refPhotoFileList.size() == 0)
+                if (!m_objectRecognitionInitialized)
                 {
-                    emit log("WARNING: Reference face list is empty!");
+                    if (! initObjectRecognition() )
+                        return;
                 }
+
+                matrix<rgb_pixel> crop;
+                dlib::array<matrix<rgb_pixel>> images;
+                matrix<rgb_pixel> imgMat = mat(img);
+
+                if (m_settings->deterministicObjectDetection)
+                    crop_images(imgMat, images, nullptr, m_numCrops);
                 else
+                    crop_images(imgMat, images, &rnd, m_numCrops);
+
+                matrix<float,1,1000> p = sum_rows(mat(snet(images.begin(), images.end()))) / m_numCrops;
+
+                QVector<QPair<float, QString>> result;
+
+                for (size_t k = 0; k < m_settings->labelCount; ++k)
                 {
-                    setupReference(m_refPhotoFileList);
+                    unsigned long predicted_label = index_of_max(p);
+                    result.append( { p(predicted_label), QString::fromStdString(labels[predicted_label]) } );
+                    p(predicted_label) = 0;
                 }
+
+                emit doneObject(result);
             }
+        }();
 
-            auto faces = findFaces(img);
-
-            if (faces.size() > 0)
+        [&]() {
+            if (m_settings->faceRecognitionEnabled)
             {
-                rectangle rect;
-                for (const auto& face : referenceFaces)
+                if(!m_faceRecognitionInitialized)
                 {
-                    faces.push_back(make_tuple(get<0>(face), rect, get<2>(face)));
+                    if(! initFaceRecognition() )
+                        return;
                 }
 
-                auto graph = createGraph(faces, m_threshold);
+                auto faces = findFaces(img);
 
-                auto clusters = cluster(graph, faces);
-
-                QVector<QPair<QRect, QString>> linearFaces;
-
-                for (const auto& it : clusters)
+                if (faces.size() > 0)
                 {
-                    QString str = it.first;
-                    for (const auto& it2 : it.second)
+                    rectangle rect;
+                    for (const auto& face : referenceFaces)
                     {
-                        linearFaces.push_back(qMakePair(QRect(it2.left(), it2.top(), it2.width(), it2.height()), str));
+                        faces.push_back(make_tuple(get<0>(face), rect, get<2>(face)));
                     }
-                }
 
-                emit doneFace(linearFaces);
+                    auto graph = createGraph(faces, m_threshold);
+
+                    auto clusters = cluster(graph, faces);
+
+                    QVector<QPair<QRect, QString>> linearFaces;
+
+                    for (const auto& it : clusters)
+                    {
+                        QString str = it.first;
+                        for (const auto& it2 : it.second)
+                        {
+                            linearFaces.push_back(qMakePair(QRect(it2.left(), it2.top(), it2.width(), it2.height()), str));
+                        }
+                    }
+
+                    emit doneFace(linearFaces);
+                }
             }
-        }
+        }();
 
         m_busy = false;
     }
