@@ -5,7 +5,7 @@
 cmake_minimum_required(VERSION 3.14)
 
 project(iot-facerecognition-server LANGUAGES CXX)
-project(iot-facerecognition-server VERSION 1.5.0)
+project(iot-facerecognition-server VERSION 2.0.0)
 add_compile_definitions(VERSION="${CMAKE_PROJECT_VERSION}")
 
 set(CMAKE_INCLUDE_CURRENT_DIR OFF)
