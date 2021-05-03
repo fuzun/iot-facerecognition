@@ -6,6 +6,7 @@ Even though the project's name is 'iot-facerecognition', with the latest version
 iot-facerecognition consists of two parts: server and client. Server, or the backend, is responsible for parsing the data that the connected clients send concurrently. It uses the ResNet network defined in dlib's examplary `Deep Face Recognition` (http://dlib.net/dnn_face_recognition_ex.cpp.html)  to perform face detection and recognition. Face recognition is done for each client in parallel. It should handle multiple amount of clients as long as the hardware allows. The server is written in C++.
 
 ![Schematic](https://raw.githubusercontent.com/fuzun/iot-facerecognition/master/readme-images/schematic.png)
+
 The client captures images with the connected camera and streams it to the server, continuously. After the server resolves the faces and/or objects contained in a certain video frame it sends back JSON formatted text regarding the faces (geometry and tag)  and the objects (label and prediction rate) to the client and according to the client's configuration, the client shows rectangle around faces along with their tags as well as a textbox for the found objects.
 
 There are two types of client implementations available. One of them is written in C++ and requires Qt Framework, while the other one is written in Python. The qt client is newer and is better supported, it also works faster and tested to work even on Raspberry Pi 0 W. The Python based client uses OpenCV while the C++ based one uses OpenMAX if possible (if not possible, Qt Multimedia backend).
