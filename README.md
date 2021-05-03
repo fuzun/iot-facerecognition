@@ -96,12 +96,13 @@ In future, I may make the config.ini auto-generated from CMake options.
   * `Location` (string) -> Points to the file location in which the logs are stored. Default is `log.txt`.
 * `DLIB`
   * `ReferenceFile` (string) -> Specifies the file containing reference face data for face recognition. iot-facerecognition-server will try to find faces that are specified in this file in the input stream. Default is `faces.json`. This file must be in JSON format. See below for example:
-
-		  [
+ 
+		[
 		  {
 		    "tag": "trump",
 		    "photos": [
-		      "trump.jpg", "trump2.jpg"
+		      "trump.jpg",
+		      "trump2.jpg"
 		    ]
 		  },
 		  {
@@ -128,36 +129,34 @@ Sample face recognition result:
 
 ```json
 [
-	{
-		"tag": "trump",
-		
-		"x": 10,
-		"y": 200,
-		"width": 128,
-		"height": 128
-	},
-	{
-		"tag": "",
-	
-		"x": 35,
-		"y": 50,
-		"width": 64,
-		"height": 86
-	},
+  {
+    "tag": "trump",
+    "x": 10,
+    "y": 200,
+    "width": 128,
+    "height": 128
+  },
+  {
+    "tag": "",
+    "x": 35,
+    "y": 50,
+    "width": 64,
+    "height": 86
+  }
 ]
 ```
 
 Sample object recognition result:
 ```json
 [
-	{
-		"label": "King penguin",
-		"prediction": 0.15
-	},
-	{
-		"label": "Chihuahua",
-		"prediction": 0.0005
-	},
+  {
+    "label": "King penguin",
+    "prediction": 0.15
+  },
+  {
+    "label": "Chihuahua",
+    "prediction": 0.0005
+  }
 ]
 ```
 
@@ -274,17 +273,15 @@ An example command (the command that contains facial recognition results):
 ```json
 {
   "command": 3,
-  "context": {
-	[
-	  	{
-			"tag": "trump",
-			"x": 10,
-			"y": 200,
-			"width": 128,
-			"height": 128
-		}
-	]
-  }
+  "context": [
+    {
+      "tag": "trump",
+      "x": 10,
+      "y": 200,
+      "width": 128,
+      "height": 128
+    }
+  ]
 }
 ```
 
