@@ -80,6 +80,8 @@ I did not test it on Raspberry Pi 0, but I think that it would not work properly
 
 ## Usage
 ### Server
+First of all, because of encryption, OpenSSL >= 1.1 (runtimes) must be available on the machine. It is not possible to disable encryption.
+
 The server needs to be configured before usage. To configure the server, open the <b>config.ini</b> file that comes with the server and modify lines according to these:
 In future, I may make the config.ini auto-generated from CMake options.
 
